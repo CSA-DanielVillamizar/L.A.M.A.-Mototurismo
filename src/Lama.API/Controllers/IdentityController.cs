@@ -47,7 +47,10 @@ public class IdentityController : ControllerBase
         {
             _logger.LogWarning("Solicitud inválida de vinculación: externalSubjectId={ExternalSubjectId}, memberId={MemberId}",
                 request?.ExternalSubjectId, request?.MemberId);
-            return BadRequest(new { message = "externalSubjectId y memberId son requeridos" });
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Invalid request",
+                detail: "externalSubjectId y memberId son requeridos");
         }
 
         try
@@ -77,12 +80,18 @@ public class IdentityController : ControllerBase
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Miembro no encontrado: {MemberId}", request.MemberId);
-            return NotFound(new { message = $"Miembro con ID {request.MemberId} no encontrado" });
+            return Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Member not found",
+                detail: $"Miembro con ID {request.MemberId} no encontrado");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error vinculando identidad: {ExternalSubjectId}", request.ExternalSubjectId);
-            return StatusCode(500, new { message = "Error interno al vincular identidad" });
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Identity link failure",
+                detail: "Error interno al vincular identidad");
         }
     }
 
@@ -109,7 +118,10 @@ public class IdentityController : ControllerBase
             {
                 _logger.LogWarning("Usuario autenticado no tiene registro de IdentityUser: {Email}",
                     User.FindFirst("email")?.Value);
-                return NotFound(new { message = "Usuario no tiene registro de identidad" });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    title: "Identity not found",
+                    detail: "Usuario no tiene registro de identidad");
             }
 
             return Ok(new IdentityMeResponse
@@ -128,7 +140,10 @@ public class IdentityController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error obteniendo perfil del usuario actual");
-            return StatusCode(500, new { message = "Error interno al obtener perfil" });
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Profile retrieval failure",
+                detail: "Error interno al obtener perfil");
         }
     }
 }

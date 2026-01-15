@@ -3,6 +3,7 @@
 **Base URL:** `https://localhost:7001/api/v1`
 
 - **Versionado:** Todos los endpoints comienzan con `/api/v1/...`.
+- **Convención URLs:** kebab-case (`/api/v1/member-status-types`, `/api/v1/identity`) - estándar web moderno.
 - **Convención JSON:** PascalCase en todas las propiedades (backend y frontend).
 - **Errores:** Respuestas estándar RFC 7807 (`application/problem+json`).
 - **OpenAPI:** `/swagger/v1/swagger.json` (UI en `/swagger`).
@@ -22,6 +23,7 @@
 ## 1) Eventos
 **GET /api/v1/events?year=2026**
 - `year` (int?, query) opcional
+- URL automática: kebab-case transformer
 
 Respuesta 200:
 ```json
@@ -203,9 +205,12 @@ Respuesta 200 (extracto):
 ---
 ## Notas APIM-ready
 - Versionado obligatorio `/api/v1`.
-- Respuestas de error usan ProblemDetails (RFC 7807).
-- Swagger con ejemplos enriquecidos (multipart, SAS, búsqueda).
+- URLs en kebab-case (`/member-status-types`) vía RouteTokenTransformer automático.
+- Respuestas de error usan ProblemDetails (RFC 7807) en todos los endpoints.
+- Swagger con ejemplos enriquecidos (multipart, SAS, búsqueda, eventos).
 - Contrato JSON en PascalCase para alinear backend y frontend.
+- Rate limiting: search 30/min, upload 10/min.
+- CancellationToken support para AbortController (frontend).
 
 ### Production
 ```
