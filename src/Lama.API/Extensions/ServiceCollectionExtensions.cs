@@ -18,9 +18,22 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddLamaServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // DbContext
-        services.AddDbContext<LamaDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("LamaDb")));
+        // Multi-Tenancy: Registrar TenantContext como Scoped (una instancia por request)
+        services.AddScoped<TenantContext>();
+        services.AddScoped<ITenantProvider>(provider => provider.GetRequiredService<TenantContext>());
+
+        // DbContext con inyección de TenantProvider para query filters
+        services.AddDbContext<LamaDbContext>((serviceProvider, options) =>
+        {
+            options.UseSqlServer(configuration.GetConnectionString("LamaDb"));
+            // Inyectar TenantProvider al crear LamaDbContext
+            var tenantProvider = serviceProvider.GetService<ITenantProvider>();
+            options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        });
+        
+        // Alternativa: Registrar LamaDbContext como ILamaDbContext (sin TenantProvider en constructor principal)
+        // services.AddDbContext<LamaDbContext>(options =>
+        //     options.UseSqlServer(configuration.GetConnectionString("LamaDb")));
         
         // Registrar LamaDbContext como ILamaDbContext para MemberStatusService
         services.AddScoped<ILamaDbContext>(provider => provider.GetRequiredService<LamaDbContext>());
@@ -41,3 +54,4 @@ public static class ServiceCollectionExtensions
         return services;
     }
 }
+

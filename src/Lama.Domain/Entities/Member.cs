@@ -10,6 +10,9 @@ public class Member
     /// <summary>Identificador único</summary>
     public int Id { get; set; }
 
+    /// <summary>ID del tenant (multi-tenancy). Default: LAMA_DEFAULT (00000000-0000-0000-0000-000000000001)</summary>
+    public Guid TenantId { get; set; } = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
     /// <summary>ID del capítulo al que pertenece</summary>
     public int ChapterId { get; set; }
 

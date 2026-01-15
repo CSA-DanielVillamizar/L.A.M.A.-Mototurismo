@@ -1,4 +1,5 @@
 using Lama.API.Extensions;
+using Lama.API.Middleware;
 
 namespace Lama.API;
 
@@ -40,6 +41,10 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+
+        // Middleware de Multi-Tenancy: DEBE estar antes de UseCors para resolver tenant temprano
+        app.UseMiddleware<TenantResolutionMiddleware>();
+
         app.UseCors("AllowAll");
         app.UseAuthorization();
         app.MapControllers();
