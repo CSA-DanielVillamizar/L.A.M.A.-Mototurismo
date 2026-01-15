@@ -1,8 +1,17 @@
-# LAMA Web - Frontend COR
+# L.A.M.A. Mototurismo - Frontend Modernizado v2.0
 
-Frontend Next.js 14 con TypeScript y Tailwind CSS para el sistema de evidencias COR (Corte) de LAMA Mototurismo.
+Renovación completa del frontend de L.A.M.A. Mototurismo con arquitectura limpia, design system profesional y experiencia de usuario mejorada.
 
-## 🚀 Stack Tecnológico
+## 📋 Contenido
+
+- [Características](#características)
+- [Arquitectura](#arquitectura)
+- [Stack Tecnológico](#stack-tecnológico)
+- [Instalación](#instalación)
+- [Estructura del Proyecto](#estructura-del-proyecto)
+- [Guía de Componentes](#guía-de-componentes)
+- [Desarrollo](#desarrollo)
+- [Deployment](#deployment)
 
 - **Framework**: Next.js 14 (App Router)
 - **Lenguaje**: TypeScript 5.4+
