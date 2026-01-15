@@ -59,6 +59,12 @@ public class LamaDbContext : DbContext, ILamaDbContext
     /// <summary>Tabla de Evidencias (fotos de piloto + odómetro)</summary>
     public DbSet<Evidence> Evidences { get; set; } = null!;
 
+    /// <summary>Tabla de Snapshots de Ranking (denormalizado para consultas rápidas)</summary>
+    public DbSet<RankingSnapshot> RankingSnapshots { get; set; } = null!;
+
+    /// <summary>Tabla de Logs de Auditoría (trazabilidad de acciones auditables)</summary>
+    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -75,6 +81,8 @@ public class LamaDbContext : DbContext, ILamaDbContext
         modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
         modelBuilder.ApplyConfiguration(new UserScopeConfiguration());
         modelBuilder.ApplyConfiguration(new EvidenceConfiguration());
+        modelBuilder.ApplyConfiguration(new RankingSnapshotConfiguration());
+        modelBuilder.ApplyConfiguration(new AuditLogConfiguration());
 
         // Query Filters para Multi-Tenancy
         // Estas se aplican automáticamente a todas las queries, sin necesidad de modificar los repositorios
@@ -104,6 +112,12 @@ public class LamaDbContext : DbContext, ILamaDbContext
 
             // Evidences: filtrar por TenantId actual
             modelBuilder.Entity<Evidence>().HasQueryFilter(e => e.TenantId == _tenantProvider.CurrentTenantId);
+
+            // RankingSnapshots: filtrar por TenantId actual
+            modelBuilder.Entity<RankingSnapshot>().HasQueryFilter(rs => rs.TenantId == _tenantProvider.CurrentTenantId);
+
+            // AuditLogs: filtrar por TenantId actual
+            modelBuilder.Entity<AuditLog>().HasQueryFilter(al => al.TenantId == _tenantProvider.CurrentTenantId);
         }
     }
 }

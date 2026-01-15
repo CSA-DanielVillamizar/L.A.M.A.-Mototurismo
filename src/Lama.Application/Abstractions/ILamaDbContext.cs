@@ -55,6 +55,16 @@ public interface ILamaDbContext
     DbSet<Evidence> Evidences { get; }
 
     /// <summary>
+    /// DbSet para la entidad RankingSnapshot (snapshots denormalizados de ranking)
+    /// </summary>
+    DbSet<RankingSnapshot> RankingSnapshots { get; }
+
+    /// <summary>
+    /// DbSet para la entidad AuditLog (registros de auditoría y trazabilidad)
+    /// </summary>
+    DbSet<AuditLog> AuditLogs { get; }
+
+    /// <summary>
     /// Guarda los cambios en la base de datos de forma asincrónica
     /// </summary>
     /// <param name="cancellationToken">Token de cancelación</param>

@@ -20,6 +20,7 @@ public class EvidenceController : ControllerBase
     private readonly ILamaDbContext _dbContext;
     private readonly IBlobSasService _blobSasService;
     private readonly IPointsCalculatorService _pointsCalculatorService;
+    private readonly IRankingService _rankingService;
     private readonly ITenantProvider _tenantProvider;
     private readonly ILogger<EvidenceController> _logger;
 
@@ -27,12 +28,14 @@ public class EvidenceController : ControllerBase
         ILamaDbContext dbContext,
         IBlobSasService blobSasService,
         IPointsCalculatorService pointsCalculatorService,
+        IRankingService rankingService,
         ITenantProvider tenantProvider,
         ILogger<EvidenceController> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _blobSasService = blobSasService ?? throw new ArgumentNullException(nameof(blobSasService));
         _pointsCalculatorService = pointsCalculatorService ?? throw new ArgumentNullException(nameof(pointsCalculatorService));
+        _rankingService = rankingService ?? throw new ArgumentNullException(nameof(rankingService));
         _tenantProvider = tenantProvider ?? throw new ArgumentNullException(nameof(tenantProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -338,6 +341,39 @@ public class EvidenceController : ControllerBase
 
                     _logger.LogInformation("Asistencia confirmada. AttendanceId: {AttendanceId}, Puntos: {Points}",
                         attendance.Id, pointsAwarded);
+
+                    // 4. Actualizar ranking (MVP: actualización incremental inmediata)
+                    var rankingEvent = new AttendanceConfirmedEvent
+                    {
+                        AttendanceId = attendance.Id,
+                        MemberId = attendance.MemberId,
+                        EventId = attendance.EventId,
+                        Year = DateTime.UtcNow.Year,
+                        PointsAwarded = pointsCalculation.TotalPoints,
+                        MilesRecorded = attendance.Event.Mileage,
+                        ScopeType = "GLOBAL", // Por defecto GLOBAL, puede extenderse a múltiples ámbitos
+                        ScopeId = "GLOBAL",
+                        VisitorClass = pointsCalculation.VisitorClassification.ToString(),
+                        ConfirmedAt = DateTime.UtcNow
+                    };
+
+                    var rankingResult = await _rankingService.UpdateIncrementalAsync(
+                        _tenantProvider.CurrentTenantId,
+                        rankingEvent);
+
+                    if (!rankingResult.Success)
+                    {
+                        _logger.LogWarning(
+                            "Fallo al actualizar ranking incremental. AttendanceId: {AttendanceId}, Message: {Message}",
+                            attendance.Id, rankingResult.Message);
+                        // Continuar aunque falle el ranking (podría recuperarse en rebuild nocturno)
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "Ranking actualizado. AttendanceId: {AttendanceId}, NewRank: {NewRank}",
+                            attendance.Id, rankingResult.CurrentRank);
+                    }
                 }
             }
 

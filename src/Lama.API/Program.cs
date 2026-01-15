@@ -118,7 +118,11 @@ public class Program
 
         app.UseHttpsRedirection();
 
-        // Middleware de Multi-Tenancy: DEBE estar antes de autenticación para resolver tenant temprano
+        // Middleware de CorrelationId: DEBE estar al principio para capturar todas las solicitudes
+        // Asigna ID único a cada solicitud para rastreo distribuido
+        app.UseCorrelationIdMiddleware();
+
+        // Middleware de Multi-Tenancy: Resuelve tenant temprano
         app.UseMiddleware<TenantResolutionMiddleware>();
 
         // Middleware de autenticación y autorización JWT

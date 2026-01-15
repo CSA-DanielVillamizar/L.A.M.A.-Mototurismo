@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Lama.Infrastructure.Data;
+using Lama.Infrastructure.Data.Interceptors;
 using Lama.Application.Services;
 using Lama.Application.Abstractions;
 using Lama.Application.Repositories;
@@ -18,6 +19,9 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddLamaServices(this IServiceCollection services, IConfiguration configuration)
     {
+        // Registrar Interceptor de Auditoría ANTES de registrar DbContext
+        services.AddScoped<AuditLoggingInterceptor>();
+
         // Multi-Tenancy: Registrar TenantContext como Scoped (una instancia por request)
         services.AddScoped<TenantContext>();
         services.AddScoped<ITenantProvider>(provider => provider.GetRequiredService<TenantContext>());
@@ -29,6 +33,10 @@ public static class ServiceCollectionExtensions
             // Inyectar TenantProvider al crear LamaDbContext
             var tenantProvider = serviceProvider.GetService<ITenantProvider>();
             options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+            
+            // Registrar interceptor de auditoría en SaveChanges
+            var auditingInterceptor = serviceProvider.GetRequiredService<AuditLoggingInterceptor>();
+            options.AddInterceptors(auditingInterceptor);
         });
         
         // Alternativa: Registrar LamaDbContext como ILamaDbContext (sin TenantProvider en constructor principal)
@@ -59,6 +67,12 @@ public static class ServiceCollectionExtensions
 
         // Blob SAS Service: Genera SAS URLs para upload directo a Azure Blob
         services.AddScoped<IBlobSasService, BlobSasService>();
+
+        // Ranking Service: Gestiona snapshots de ranking con actualizaciones incrementales y rebuilds
+        services.AddScoped<IRankingService, RankingService>();
+
+        // Audit Service: Registra y consulta auditoría de acciones en el sistema
+        services.AddScoped<IAuditService, AuditService>();
 
         // Azure Blob Service Client: Cliente para Azure Blob Storage
         services.AddSingleton(sp =>
