@@ -13,7 +13,7 @@ namespace Lama.API.Controllers;
 /// Controlador para consultas de ranking escalable basado en snapshots
 /// </summary>
 [ApiController]
-[Route("api/rankings")]
+[Route("api/v1/[controller]")]
 [Authorize]
 public class RankingsController : ControllerBase
 {
@@ -59,13 +59,19 @@ public class RankingsController : ControllerBase
             // Validaciones
             if (year < 2000 || year > DateTime.UtcNow.Year + 10)
             {
-                return BadRequest(new { error = "Año inválido" });
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Invalid year",
+                    detail: "Año inválido");
             }
 
             var validScopes = new[] { "CHAPTER", "COUNTRY", "CONTINENT", "GLOBAL" };
             if (!validScopes.Contains(scopeType, StringComparer.OrdinalIgnoreCase))
             {
-                return BadRequest(new { error = $"ScopeType debe ser uno de: {string.Join(", ", validScopes)}" });
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Invalid scope type",
+                    detail: $"ScopeType debe ser uno de: {string.Join(", ", validScopes)}");
             }
 
             scopeType = scopeType.ToUpper();
@@ -132,7 +138,10 @@ public class RankingsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al consultar ranking");
-            return StatusCode(500, new { error = "Error interno del servidor" });
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Ranking retrieval failure",
+                detail: "Error interno del servidor");
         }
     }
 
@@ -160,7 +169,10 @@ public class RankingsController : ControllerBase
 
             if (member == null)
             {
-                return NotFound(new { error = $"Miembro {memberId} no encontrado" });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    title: "Member not found",
+                    detail: $"Miembro {memberId} no encontrado");
             }
 
             _logger.LogInformation("Obteniendo dashboard para MemberId: {MemberId}, Year: {Year}",
@@ -262,7 +274,10 @@ public class RankingsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener dashboard del miembro");
-            return StatusCode(500, new { error = "Error interno del servidor" });
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Member dashboard failure",
+                detail: "Error interno del servidor");
         }
     }
 
@@ -288,7 +303,10 @@ public class RankingsController : ControllerBase
         {
             if (year < 2000 || year > DateTime.UtcNow.Year + 10)
             {
-                return BadRequest(new { error = "Año inválido" });
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Invalid year",
+                    detail: "Año inválido");
             }
 
             scopeType = scopeType.ToUpper();
@@ -313,7 +331,10 @@ public class RankingsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error en rebuild de ranking");
-            return StatusCode(500, new { error = "Error interno del servidor" });
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Ranking rebuild failure",
+                detail: "Error interno del servidor");
         }
     }
 
@@ -346,7 +367,10 @@ public class RankingsController : ControllerBase
 
             if (snapshot == null)
             {
-                return NotFound(new { error = $"Miembro {memberId} no tiene ranking en este período" });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    title: "Member ranking not found",
+                    detail: $"Miembro {memberId} no tiene ranking en este período");
             }
 
             // Obtener total de miembros en el ámbito
@@ -377,7 +401,10 @@ public class RankingsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener ranking del miembro");
-            return StatusCode(500, new { error = "Error interno del servidor" });
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Member ranking failure",
+                detail: "Error interno del servidor");
         }
     }
 

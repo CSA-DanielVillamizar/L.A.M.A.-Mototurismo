@@ -7,7 +7,7 @@ using Lama.Domain.Enums;
 namespace Lama.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [Authorize]
 public class AuditController : ControllerBase
 {
@@ -39,7 +39,12 @@ public class AuditController : ControllerBase
             var correlationId = HttpContext.Items["CorrelationId"]?.ToString() ?? "N/A";
 
             if (memberId <= 0)
-                return BadRequest("Member ID must be greater than 0.");
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Invalid member id",
+                    detail: "Member ID must be greater than 0.");
+            }
 
             var audits = await _auditService.GetAuditsByMemberAsync(Guid.NewGuid(), memberId, take);
 
@@ -52,7 +57,10 @@ public class AuditController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving audit logs for member {MemberId}", memberId);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving audit logs.");
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Audit retrieval failure",
+                detail: "An error occurred while retrieving audit logs.");
         }
     }
 
@@ -80,11 +88,19 @@ public class AuditController : ControllerBase
             if (!Enum.TryParse<AuditEntityType>(entityType, ignoreCase: true, out var parsedEntityType))
             {
                 var validTypes = string.Join(", ", Enum.GetNames(typeof(AuditEntityType)));
-                return BadRequest($"Invalid entity type. Valid types: {validTypes}");
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Invalid entity type",
+                    detail: $"Valid types: {validTypes}");
             }
 
             if (string.IsNullOrWhiteSpace(entityId))
-                return BadRequest("Entity ID cannot be empty.");
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Invalid entity id",
+                    detail: "Entity ID cannot be empty.");
+            }
 
             var audits = await _auditService.GetAuditsByEntityAsync(Guid.NewGuid(), parsedEntityType, entityId, take);
 
@@ -97,7 +113,10 @@ public class AuditController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving audit logs for {EntityType} {EntityId}", entityType, entityId);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving audit logs.");
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Audit retrieval failure",
+                detail: "An error occurred while retrieving audit logs.");
         }
     }
 
@@ -116,7 +135,12 @@ public class AuditController : ControllerBase
         try
         {
             if (string.IsNullOrWhiteSpace(correlationId))
-                return BadRequest("Correlation ID cannot be empty.");
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Invalid correlation id",
+                    detail: "Correlation ID cannot be empty.");
+            }
 
             var audits = await _auditService.GetAuditsByCorrelationIdAsync(correlationId);
 
@@ -129,7 +153,10 @@ public class AuditController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving audit logs for CorrelationId {CorrelationId}", correlationId);
-            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving audit logs.");
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Audit retrieval failure",
+                detail: "An error occurred while retrieving audit logs.");
         }
     }
 
@@ -158,7 +185,12 @@ public class AuditController : ControllerBase
             var correlationId = HttpContext.Items["CorrelationId"]?.ToString() ?? "N/A";
 
             if (days <= 0 || days > 365)
-                return BadRequest("Days must be between 1 and 365.");
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    title: "Invalid days",
+                    detail: "Days must be between 1 and 365.");
+            }
 
             var summary = await _auditService.GetAuditSummaryAsync(Guid.NewGuid(), days);
 
@@ -171,7 +203,10 @@ public class AuditController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating audit summary");
-            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while generating the audit summary.");
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Audit summary failure",
+                detail: "An error occurred while generating the audit summary.");
         }
     }
 }

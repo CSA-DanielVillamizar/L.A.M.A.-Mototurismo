@@ -11,7 +11,7 @@ namespace Lama.API.Controllers;
 /// - GET /api/identity/me - Obtener perfil del usuario actual autenticado
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public class IdentityController : ControllerBase
 {
     private readonly IIdentityUserService _identityUserService;

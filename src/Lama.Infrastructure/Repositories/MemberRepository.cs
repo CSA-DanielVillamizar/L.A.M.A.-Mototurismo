@@ -40,6 +40,44 @@ public class MemberRepository(LamaDbContext context) : IMemberRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<Member>> SearchByNameAsync(string searchTerm, int take = 20, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return Enumerable.Empty<Member>();
+        }
+
+        // Normalizar el término de búsqueda (uppercase, sin tildes)
+        var normalizedTerm = NormalizeSearchTerm(searchTerm);
+
+        // Query ejecutada en SQL Server con índice en CompleteNamesNormalized
+        return await _context.Members
+            .Where(m => m.CompleteNamesNormalized != null && 
+                        m.CompleteNamesNormalized.Contains(normalizedTerm))
+            .OrderBy(m => m.CompleteNames)
+            .Take(take)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Normaliza texto para búsqueda: uppercase, sin tildes, sin espacios extra
+    /// </summary>
+    private static string NormalizeSearchTerm(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
+
+        // Remover tildes
+        var normalized = text.Normalize(System.Text.NormalizationForm.FormD);
+        var chars = normalized.Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) 
+            != System.Globalization.UnicodeCategory.NonSpacingMark).ToArray();
+        
+        return new string(chars)
+            .ToUpperInvariant()
+            .Trim();
+    }
+
     public async Task AddAsync(Member member, CancellationToken cancellationToken = default)
     {
         await _context.Members.AddAsync(member, cancellationToken);

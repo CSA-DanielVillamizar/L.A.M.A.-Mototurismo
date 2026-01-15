@@ -1,242 +1,211 @@
-# COR API Reference
-## Endpoints Administrativos para Sistema de Confirmación de Asistencia
+# COR API Reference (v1)
 
-Base URL: `http://localhost:5000` (Development)
+**Base URL:** `https://localhost:7001/api/v1`
 
----
+- **Versionado:** Todos los endpoints comienzan con `/api/v1/...`.
+- **Convención JSON:** PascalCase en todas las propiedades (backend y frontend).
+- **Errores:** Respuestas estándar RFC 7807 (`application/problem+json`).
+- **OpenAPI:** `/swagger/v1/swagger.json` (UI en `/swagger`).
 
-## 📅 Eventos
-
-### GET /api/events
-**Descripción:** Obtiene todos los eventos, opcionalmente filtrado por año
-
-**Query Parameters:**
-- `year?` (int) - Año para filtrar eventos (opcional)
-
-**Response:** `200 OK`
-```json
-[
-  {
-    "eventId": 1,
-    "eventName": "Viaje Naturaleza - Región Cafetera",
-    "eventDate": "2025-03-15",
-    "chapterId": 5,
-    "eventType": "3"
-  }
-]
-```
-
-**Ejemplos:**
-```
-GET /api/events
-GET /api/events?year=2025
-```
-
----
-
-## 👥 Admin Miembros
-
-### GET /api/admin/members/search
-**Descripción:** Busca miembros por nombre, número de orden o placa de vehículo
-
-**Query Parameters:**
-- `q` (string, required) - Término de búsqueda (mínimo 1 carácter)
-
-**Response:** `200 OK`
-```json
-[
-  {
-    "memberId": 42,
-    "firstName": "Juan",
-    "lastName": "Pérez",
-    "fullName": "Juan Pérez",
-    "status": "MEMBER",
-    "chapterId": 5,
-    "order": 42
-  }
-]
-```
-
-**Ejemplos:**
-```
-GET /api/admin/members/search?q=Juan
-GET /api/admin/members/search?q=42        (búsqueda por orden)
-GET /api/admin/members/search?q=ABC-1234  (búsqueda por placa)
-```
-
-**Error Responses:**
-- `400 Bad Request` - Término de búsqueda vacío o muy corto
-
----
-
-### GET /api/admin/members/{memberId}/vehicles
-**Descripción:** Obtiene todos los vehículos de un miembro específico
-
-**Path Parameters:**
-- `memberId` (int) - ID del miembro
-
-**Response:** `200 OK`
-```json
-[
-  {
-    "vehicleId": 7,
-    "memberId": 42,
-    "licPlate": "ABC-1234",
-    "motorcycleData": "Harley-Davidson Sportster 1200 Negro",
-    "trike": false,
-    "displayName": "Harley-Davidson Sportster 1200 Negro - ABC-1234"
-  },
-  {
-    "vehicleId": 8,
-    "memberId": 42,
-    "licPlate": "XYZ-5678",
-    "motorcycleData": "Honda CB500F Gris",
-    "trike": false,
-    "displayName": "Honda CB500F Gris - XYZ-5678"
-  }
-]
-```
-
-**Error Responses:**
-- `404 Not Found` - Miembro no existe
-
----
-
-### GET /api/admin/members/{memberId}
-**Descripción:** Obtiene detalles de un miembro específico
-
-**Path Parameters:**
-- `memberId` (int) - ID del miembro
-
-**Response:** `200 OK`
+## Errores (ProblemDetails)
 ```json
 {
-  "memberId": 42,
-  "firstName": "Juan",
-  "lastName": "Pérez",
-  "fullName": "Juan Pérez",
-  "status": "MEMBER",
-  "chapterId": 5,
-  "order": 42
+  "Type": "about:blank",
+  "Title": "Invalid search term",
+  "Status": 400,
+  "Detail": "El término de búsqueda debe tener al menos 2 caracteres",
+  "Instance": "/api/v1/members/search"
 }
 ```
 
-**Error Responses:**
-- `404 Not Found` - Miembro no existe
-
 ---
+## 1) Eventos
+**GET /api/v1/events?year=2026**
+- `year` (int?, query) opcional
 
-## 📋 Admin Eventos
-
-### GET /api/admin/event/{eventId}/attendees
-**Descripción:** Obtiene la lista de asistentes a un evento con estado específico
-
-**Path Parameters:**
-- `eventId` (int) - ID del evento
-
-**Query Parameters:**
-- `status?` (string) - Filtrar por estado: `PENDING`, `CONFIRMED`, `REJECTED` (opcional)
-
-**Response:** `200 OK`
+Respuesta 200:
 ```json
 [
   {
-    "attendanceId": 101,
-    "memberId": 42,
-    "completeNames": "Juan Pérez",
-    "order": 42,
-    "vehicleId": 7,
-    "licPlate": "ABC-1234",
-    "motorcycleData": "Harley-Davidson Sportster 1200 Negro",
-    "status": "PENDING",
-    "confirmedAt": null
-  },
-  {
-    "attendanceId": 102,
-    "memberId": 51,
-    "completeNames": "María García",
-    "order": 51,
-    "vehicleId": 10,
-    "licPlate": "DEF-5678",
-    "motorcycleData": "Yamaha YZF-R1 Roja",
-    "status": "CONFIRMED",
-    "confirmedAt": "2025-03-15T10:30:00"
+    "Id": 501,
+    "Name": "Continental Ride",
+    "Location": "Buenos Aires, AR",
+    "EventStartDate": "2026-03-10T09:00:00Z",
+    "EventEndDate": "2026-03-12T18:00:00Z",
+    "ChapterId": 7
   }
 ]
 ```
 
-**Ejemplos:**
-```
-GET /api/admin/event/1/attendees              (todos los estados)
-GET /api/admin/event/1/attendees?status=PENDING    (solo pendientes)
-GET /api/admin/event/1/attendees?status=CONFIRMED  (solo confirmados)
-```
-
-**Error Responses:**
-- `404 Not Found` - Evento no existe
-
----
-
-## 📸 Admin Evidencia
-
-### POST /api/admin/evidence/upload
-**Descripción:** Sube evidencia fotográfica y confirma la asistencia de un miembro
-
-**Query Parameters:**
-- `eventId` (int) - ID del evento
-
-**Form Data (multipart/form-data):**
-- `memberId` (int) - ID del miembro
-- `vehicleId` (int) - ID del vehículo
-- `evidenceType` (string) - Tipo: `START_YEAR` o `CUTOFF`
-- `pilotWithBikePhoto` (File) - Foto: Piloto con moto
-- `odometerCloseupPhoto` (File) - Foto: Close-up odómetro
-- `odometerReading` (double) - Lectura del odómetro
-- `unit` (string) - Unidad: `Miles` o `Kilometers`
-- `readingDate?` (DateOnly) - Fecha (YYYY-MM-DD, opcional)
-- `notes?` (string) - Notas adicionales (opcional)
-
-**Response:** `200 OK`
-```json
-{
-  "message": "Asistencia confirmada exitosamente",
-  "pointsAwarded": 45,
-  "pointsPerEvent": 30,
-  "pointsPerDistance": 15,
-  "visitorClass": "VISITOR_CLASS_1",
-  "memberId": 42,
-  "vehicleId": 7,
-  "attendanceId": 101,
-  "evidenceType": "START_YEAR"
-}
-```
-
-**cURL Ejemplo:**
+cURL:
 ```bash
-curl -X POST "http://localhost:5000/api/admin/evidence/upload?eventId=1" \
-  -F "memberId=42" \
-  -F "vehicleId=7" \
-  -F "evidenceType=START_YEAR" \
-  -F "pilotWithBikePhoto=@photo1.jpg" \
-  -F "odometerCloseupPhoto=@photo2.jpg" \
-  -F "odometerReading=50250.5" \
-  -F "unit=Miles" \
-  -F "notes=Viaje exitoso"
+curl -X GET "https://localhost:7001/api/v1/events?year=2026"
 ```
-
-**Error Responses:**
-- `400 Bad Request` - Falta datos requeridos
-- `404 Not Found` - Evento, miembro o vehículo no encontrado
-- `500 Internal Server Error` - Error al procesar
 
 ---
+## 2) Búsqueda de Miembros (Autocomplete)
+**GET /api/v1/members/search?q=jose**
+- `q` (string, query) mínimo 2 caracteres
 
-## 🔐 Autenticación
+Respuesta 200:
+```json
+[
+  {
+    "MemberId": 101,
+    "FirstName": "Maria",
+    "LastName": "Lopez",
+    "FullName": "Maria Lopez",
+    "Status": "ACTIVE",
+    "ChapterId": 12
+  }
+]
+```
 
-### Development (DEBUG mode)
+cURL:
+```bash
+curl -X GET "https://localhost:7001/api/v1/members/search?q=jose"
 ```
-✅ Sin autenticación requerida para endpoints /api/admin/*
+
+---
+## 3) Solicitar SAS para subir evidencias
+**POST /api/v1/evidence/upload-request**
+
+Body `application/json`:
+```json
+{
+  "MemberId": 101,
+  "VehicleId": 3001,
+  "EventId": 501,
+  "EvidenceType": "START_YEAR",
+  "PilotPhotoContentType": "image/jpeg",
+  "OdometerPhotoContentType": "image/jpeg"
+}
 ```
+
+Respuesta 200:
+```json
+{
+  "CorrelationId": "7f5caa6c2c324c1b8c4c9d1d0a123456",
+  "PilotPhotoSasUrl": "https://storage.blob.core.windows.net/evidence/pilot.jpg?...",
+  "OdometerPhotoSasUrl": "https://storage.blob.core.windows.net/evidence/odometer.jpg?...",
+  "PilotPhotoBlobPath": "tenants/1/evidence/pilot.jpg",
+  "OdometerPhotoBlobPath": "tenants/1/evidence/odometer.jpg",
+  "ExpiresAt": "2026-01-15T23:59:59Z"
+}
+```
+
+cURL:
+```bash
+curl -X POST "https://localhost:7001/api/v1/evidence/upload-request" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "MemberId": 101,
+    "VehicleId": 3001,
+    "EventId": 501,
+    "EvidenceType": "START_YEAR",
+    "PilotPhotoContentType": "image/jpeg",
+    "OdometerPhotoContentType": "image/jpeg"
+  }'
+```
+
+---
+## 4) Registrar metadata de evidencia
+**POST /api/v1/evidence/submit**
+
+Body `application/json`:
+```json
+{
+  "CorrelationId": "7f5caa6c2c324c1b8c4c9d1d0a123456",
+  "MemberId": 101,
+  "VehicleId": 3001,
+  "EventId": 501,
+  "EvidenceType": "START_YEAR",
+  "PilotPhotoBlobPath": "tenants/1/evidence/pilot.jpg",
+  "OdometerPhotoBlobPath": "tenants/1/evidence/odometer.jpg",
+  "OdometerReading": 10500,
+  "OdometerUnit": "Miles"
+}
+```
+
+Respuesta 201:
+```json
+{
+  "EvidenceId": 9001,
+  "AttendanceId": null,
+  "Status": "PENDING_REVIEW"
+}
+```
+
+cURL:
+```bash
+curl -X POST "https://localhost:7001/api/v1/evidence/submit" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "CorrelationId": "7f5caa6c2c324c1b8c4c9d1d0a123456",
+    "MemberId": 101,
+    "VehicleId": 3001,
+    "EventId": 501,
+    "EvidenceType": "START_YEAR",
+    "PilotPhotoBlobPath": "tenants/1/evidence/pilot.jpg",
+    "OdometerPhotoBlobPath": "tenants/1/evidence/odometer.jpg",
+    "OdometerReading": 10500,
+    "OdometerUnit": "Miles"
+  }'
+```
+
+---
+## 5) Admin: upload multipart + confirm asistencia
+**POST /api/v1/admin/evidence/upload?eventId=501**
+
+`multipart/form-data`:
+- memberId (int)
+- vehicleId (int)
+- evidenceType (START_YEAR | CUTOFF)
+- pilotWithBikePhoto (file)
+- odometerCloseupPhoto (file)
+- odometerReading (number)
+- unit (Miles | Kilometers)
+- readingDate (yyyy-MM-dd, opcional)
+- notes (string, opcional)
+
+cURL:
+```bash
+curl -X POST "https://localhost:7001/api/v1/admin/evidence/upload?eventId=501" \
+  -F "memberId=101" \
+  -F "vehicleId=3001" \
+  -F "evidenceType=START_YEAR" \
+  -F "pilotWithBikePhoto=@pilot.jpg" \
+  -F "odometerCloseupPhoto=@odo.jpg" \
+  -F "odometerReading=10500" \
+  -F "unit=Miles"
+```
+
+---
+## 6) Rankings (snapshot)
+**GET /api/v1/rankings?year=2026&scopeType=GLOBAL&skip=0&take=50**
+
+Respuesta 200 (extracto):
+```json
+{
+  "Total": 2,
+  "Items": [
+    { "MemberId": 101, "CompleteNames": "Maria Lopez", "Points": 120 },
+    { "MemberId": 102, "CompleteNames": "Jose Perez", "Points": 115 }
+  ]
+}
+```
+
+---
+## Autenticación
+- Producción: JWT Bearer (Entra ID B2C) requerido en endpoints protegidos.
+- Desarrollo: algunos endpoints administrativos pueden permitir bypass (DEBUG).
+
+---
+## Notas APIM-ready
+- Versionado obligatorio `/api/v1`.
+- Respuestas de error usan ProblemDetails (RFC 7807).
+- Swagger con ejemplos enriquecidos (multipart, SAS, búsqueda).
+- Contrato JSON en PascalCase para alinear backend y frontend.
 
 ### Production
 ```

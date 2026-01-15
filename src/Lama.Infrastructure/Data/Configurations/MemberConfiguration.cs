@@ -23,6 +23,15 @@ public class MemberConfiguration : IEntityTypeConfiguration<Member>
             .HasMaxLength(255)
             .HasColumnName(" Complete Names");
 
+        // Columna normalizada para búsquedas optimizadas (sin tildes, uppercase)
+        builder.Property(m => m.CompleteNamesNormalized)
+            .HasMaxLength(255)
+            .HasColumnName("CompleteNamesNormalized");
+
+        // Índice en columna normalizada para búsquedas rápidas
+        builder.HasIndex(m => m.CompleteNamesNormalized)
+            .HasDatabaseName("IX_Members_CompleteNamesNormalized");
+
         builder.Property(m => m.Dama)
             .HasDefaultValue(false);
 

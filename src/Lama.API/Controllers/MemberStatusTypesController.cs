@@ -9,7 +9,7 @@ namespace Lama.API.Controllers;
 /// Proporciona endpoints para obtener valores de dropdowns en COR
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public class MemberStatusTypesController : ControllerBase
 {
     private readonly IMemberStatusService _statusService;

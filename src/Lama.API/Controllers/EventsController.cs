@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Lama.Application.Repositories;
+using Lama.Application.Services;
 using Lama.Application.DTOs;
 
 namespace Lama.API.Controllers;
@@ -9,22 +10,25 @@ namespace Lama.API.Controllers;
 /// Proporciona endpoints para listar eventos disponibles en el sistema
 /// </summary>
 [ApiController]
-[Route("api/events")]
+[Route("api/v1/[controller]")]
 public class EventsController : ControllerBase
 {
     private readonly IEventRepository _eventRepository;
+    private readonly ICacheService _cacheService;
     private readonly ILogger<EventsController> _logger;
 
     public EventsController(
         IEventRepository eventRepository,
+        ICacheService cacheService,
         ILogger<EventsController> logger)
     {
         _eventRepository = eventRepository ?? throw new ArgumentNullException(nameof(eventRepository));
+        _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
-    /// Obtiene todos los eventos activos disponibles para selección en formularios
+    /// Obtiene todos los eventos activos disponibles para selección en formularios - CACHEADO
     /// </summary>
     /// <returns>Lista de eventos ordenados por fecha descendente</returns>
     /// <response code="200">Lista de eventos</response>
@@ -36,30 +40,44 @@ public class EventsController : ControllerBase
     {
         try
         {
-            var events = await _eventRepository.GetAllAsync();
-            
-            // Filtrar por año si se proporciona
-            if (year.HasValue)
-            {
-                events = events.Where(e => e.EventStartDate.Year == year.Value);
-            }
-            
-            var eventDtos = events.Select(e => new EventDto
-            {
-                EventId = e.Id,
-                EventName = e.NameOfTheEvent,
-                EventDate = e.EventStartDate,
-                ChapterId = e.ChapterId,
-                EventType = e.Class.ToString() // Convertir Class a string
-            }).OrderByDescending(e => e.EventDate).ToList();
+            // Clave de caché: events:year:{year} o events:all
+            var cacheKey = year.HasValue ? $"events:year:{year.Value}" : "events:all";
 
-            _logger.LogInformation("Se obtuvieron {Count} eventos{YearFilter}", eventDtos.Count, year.HasValue ? $" para el año {year}" : "");
+            // Obtener del caché o ejecutar query (TTL 300s = 5 minutos)
+            var eventDtos = await _cacheService.GetOrCreateAsync(
+                cacheKey,
+                async () =>
+                {
+                    var events = await _eventRepository.GetAllAsync();
+
+                    // Filtrar por año si se proporciona
+                    if (year.HasValue)
+                    {
+                        events = events.Where(e => e.EventStartDate.Year == year.Value);
+                    }
+
+                    return events.Select(e => new EventDto
+                    {
+                        EventId = e.Id,
+                        EventName = e.NameOfTheEvent,
+                        EventDate = e.EventStartDate,
+                        ChapterId = e.ChapterId,
+                        EventType = e.Class.ToString()
+                    }).OrderByDescending(e => e.EventDate).ToList();
+                },
+                TimeSpan.FromSeconds(300)); // TTL 300 segundos (5 min)
+
+            _logger.LogInformation("Se obtuvieron {Count} eventos{YearFilter}", eventDtos.Count(), 
+                year.HasValue ? $" para el año {year}" : "");
             return Ok(eventDtos);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener eventos");
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Error al obtener eventos" });
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Events retrieval failure",
+                detail: "Error al obtener eventos");
         }
     }
 
@@ -84,7 +102,10 @@ public class EventsController : ControllerBase
             if (eventEntity == null)
             {
                 _logger.LogWarning("Evento no encontrado: ID {EventId}", id);
-                return NotFound(new { error = $"Evento con ID {id} no encontrado" });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    title: "Event not found",
+                    detail: $"Evento con ID {id} no encontrado");
             }
 
             var eventDto = new EventDto
@@ -101,7 +122,10 @@ public class EventsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener evento ID {EventId}", id);
-            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Error al obtener evento" });
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Event retrieval failure",
+                detail: "Error al obtener evento");
         }
     }
 }

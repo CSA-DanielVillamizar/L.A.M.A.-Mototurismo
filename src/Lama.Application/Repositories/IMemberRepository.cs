@@ -19,6 +19,13 @@ public interface IMemberRepository
     /// <summary>Obtiene todos los miembros</summary>
     Task<IEnumerable<Member>> GetAllAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Busca miembros por nombre (optimizado con índice en CompleteNamesNormalized)</summary>
+    /// <param name="searchTerm">Término de búsqueda (normalizado automáticamente)</param>
+    /// <param name="take">Número máximo de resultados (default 20)</param>
+    /// <param name="cancellationToken">Token de cancelación</param>
+    /// <returns>Lista de miembros que coinciden con el término</returns>
+    Task<IEnumerable<Member>> SearchByNameAsync(string searchTerm, int take = 20, CancellationToken cancellationToken = default);
+
     /// <summary>Agrega un nuevo miembro</summary>
     Task AddAsync(Member member, CancellationToken cancellationToken = default);
 

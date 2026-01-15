@@ -10,7 +10,7 @@ namespace Lama.API.Controllers;
 /// Endpoints exclusivos para MTO (Management Team Officers)
 /// </summary>
 [ApiController]
-[Route("api/admin/event")]
+[Route("api/v1/admin/events")]
 #if !DEBUG
 [Authorize(Roles = "MTO,Admin")]
 #endif

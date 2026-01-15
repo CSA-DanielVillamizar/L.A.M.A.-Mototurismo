@@ -22,6 +22,9 @@ public class Member
     /// <summary>Nombre completo del miembro</summary>
     public required string CompleteNames { get; set; }
 
+    /// <summary>Nombre normalizado para búsquedas (sin tildes, uppercase, sin espacios extra)</summary>
+    public string? CompleteNamesNormalized { get; set; }
+
     /// <summary>Indica si es dama (género femenino)</summary>
     public bool Dama { get; set; }
 

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Lama.API.Models.Evidence;
 using Lama.API.Utilities;
@@ -13,7 +14,7 @@ namespace Lama.API.Controllers;
 /// Controlador para gestión de evidencias fotográficas de miembros
 /// </summary>
 [ApiController]
-[Route("api/evidence")]
+[Route("api/v1/[controller]")]
 [Authorize]
 public class EvidenceController : ControllerBase
 {
@@ -40,12 +41,20 @@ public class EvidenceController : ControllerBase
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    private ActionResult ProblemResponse(int statusCode, string title, string detail)
+    {
+        return Problem(statusCode: statusCode, title: title, detail: detail);
+    }
+
     /// <summary>
     /// Endpoint 1: Solicita SAS URLs para upload directo de evidencias a Azure Blob
+    /// Rate limited: 10 requests/min por IP
     /// </summary>
     [HttpPost("upload-request")]
+    [EnableRateLimiting("upload")]
     [ProducesResponseType(typeof(EvidenceUploadResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<EvidenceUploadResponseDto>> RequestUploadSasAsync(
         [FromBody] EvidenceUploadRequestDto request)
     {
@@ -54,20 +63,20 @@ public class EvidenceController : ControllerBase
             // Validar tipo de evidencia
             if (request.EvidenceType != "START_YEAR" && request.EvidenceType != "CUTOFF")
             {
-                return BadRequest(new { error = "EvidenceType debe ser 'START_YEAR' o 'CUTOFF'" });
+                return ProblemResponse(StatusCodes.Status400BadRequest, "Invalid evidence type", "EvidenceType debe ser 'START_YEAR' o 'CUTOFF'");
             }
 
             // Validar que si es CUTOFF, debe tener EventId
             if (request.EvidenceType == "CUTOFF" && !request.EventId.HasValue)
             {
-                return BadRequest(new { error = "CUTOFF requiere EventId" });
+                return ProblemResponse(StatusCodes.Status400BadRequest, "EventId requerido", "CUTOFF requiere EventId");
             }
 
             // Validar que el miembro existe
             var member = await _dbContext.Members.FindAsync(request.MemberId);
             if (member == null)
             {
-                return BadRequest(new { error = $"Miembro con ID {request.MemberId} no existe" });
+                return ProblemResponse(StatusCodes.Status400BadRequest, "Miembro no encontrado", $"Miembro con ID {request.MemberId} no existe");
             }
 
             // Validar que el vehículo existe y pertenece al miembro
@@ -76,7 +85,7 @@ public class EvidenceController : ControllerBase
             
             if (vehicle == null)
             {
-                return BadRequest(new { error = $"Vehículo con ID {request.VehicleId} no existe o no pertenece al miembro" });
+                return ProblemResponse(StatusCodes.Status400BadRequest, "Vehículo inválido", $"Vehículo con ID {request.VehicleId} no existe o no pertenece al miembro");
             }
 
             // Validar que el evento existe (si es CUTOFF)
@@ -85,7 +94,7 @@ public class EvidenceController : ControllerBase
                 var eventEntity = await _dbContext.Events.FindAsync(request.EventId.Value);
                 if (eventEntity == null)
                 {
-                    return BadRequest(new { error = $"Evento con ID {request.EventId} no existe" });
+                    return ProblemResponse(StatusCodes.Status400BadRequest, "Evento no encontrado", $"Evento con ID {request.EventId} no existe");
                 }
             }
 
@@ -121,7 +130,7 @@ public class EvidenceController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al generar SAS URLs para evidencia");
-            return StatusCode(500, new { error = "Error interno del servidor" });
+            return ProblemResponse(StatusCodes.Status500InternalServerError, "Server error", "Error interno del servidor");
         }
     }
 
@@ -140,13 +149,13 @@ public class EvidenceController : ControllerBase
             // Validar tipo de evidencia
             if (!Enum.TryParse<EvidenceType>(request.EvidenceType, true, out var evidenceType))
             {
-                return BadRequest(new { error = "EvidenceType inválido" });
+                return ProblemResponse(StatusCodes.Status400BadRequest, "Invalid evidence type", "EvidenceType inválido");
             }
 
             // Validar que si es CUTOFF, debe tener EventId
             if (evidenceType == EvidenceType.CUTOFF && !request.EventId.HasValue)
             {
-                return BadRequest(new { error = "CUTOFF requiere EventId" });
+                return ProblemResponse(StatusCodes.Status400BadRequest, "EventId requerido", "CUTOFF requiere EventId");
             }
 
             // Verificar que los blobs existen en Azure Storage
@@ -158,7 +167,7 @@ public class EvidenceController : ControllerBase
                 _logger.LogWarning("Blobs no encontrados. CorrelationId: {CorrelationId}, PilotExists: {PilotExists}, OdometerExists: {OdometerExists}",
                     request.CorrelationId, pilotExists, odometerExists);
                 
-                return BadRequest(new { error = "Las fotos no se encontraron en el servidor. Por favor, vuelve a subirlas." });
+                return ProblemResponse(StatusCodes.Status400BadRequest, "Blobs faltantes", "Las fotos no se encontraron en el servidor. Por favor, vuelve a subirlas.");
             }
 
             // Crear registro de Evidence
@@ -227,7 +236,7 @@ public class EvidenceController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al enviar evidencia. CorrelationId: {CorrelationId}", request.CorrelationId);
-            return StatusCode(500, new { error = "Error interno del servidor" });
+            return ProblemResponse(StatusCodes.Status500InternalServerError, "Server error", "Error interno del servidor");
         }
     }
 

@@ -74,6 +74,9 @@ public static class ServiceCollectionExtensions
         // Audit Service: Registra y consulta auditoría de acciones en el sistema
         services.AddScoped<IAuditService, AuditService>();
 
+        // Cache Service: Servicio de caché distribuido (Redis) para optimización
+        services.AddSingleton<ICacheService, CacheService>();
+
         // Azure Blob Service Client: Cliente para Azure Blob Storage
         services.AddSingleton(sp =>
         {

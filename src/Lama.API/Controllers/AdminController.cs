@@ -11,7 +11,7 @@ namespace Lama.API.Controllers;
 /// En DEBUG: Permite bypass con header X-Dev-Bypass: true para testing
 /// </summary>
 [ApiController]
-[Route("api/admin")]
+[Route("api/v1/admin")]
 public class AdminController(IAttendanceConfirmationService attendanceConfirmationService) : ControllerBase
 {
     private readonly IAttendanceConfirmationService _attendanceConfirmationService = attendanceConfirmationService;
