@@ -94,7 +94,7 @@ public class EvidenceConfiguration : IEntityTypeConfiguration<Evidence>
         builder.HasOne(e => e.Event)
             .WithMany()
             .HasForeignKey(e => e.EventId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.NoAction);
 
         builder.HasOne(e => e.Attendance)
             .WithOne()

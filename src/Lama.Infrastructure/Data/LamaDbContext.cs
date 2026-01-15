@@ -15,12 +15,15 @@ public class LamaDbContext : DbContext, ILamaDbContext
 {
     private readonly ITenantProvider? _tenantProvider;
 
+    // Constructor para EF Core migrations (sin tenantProvider)
     public LamaDbContext(DbContextOptions<LamaDbContext> options)
         : base(options)
     {
+        _tenantProvider = null;
     }
 
-    public LamaDbContext(DbContextOptions<LamaDbContext> options, ITenantProvider tenantProvider)
+    // Constructor con TenantProvider para aplicación en runtime
+    public LamaDbContext(DbContextOptions<LamaDbContext> options, ITenantProvider? tenantProvider)
         : base(options)
     {
         _tenantProvider = tenantProvider;

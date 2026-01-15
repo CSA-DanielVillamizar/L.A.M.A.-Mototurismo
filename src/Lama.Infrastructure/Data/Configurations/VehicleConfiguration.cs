@@ -81,7 +81,7 @@ public class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
         builder.HasOne(v => v.Member)
             .WithMany(m => m.Vehicles)
             .HasForeignKey(v => v.MemberId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.NoAction);
 
         builder.HasOne(v => v.ValidatedByMember)
             .WithMany()

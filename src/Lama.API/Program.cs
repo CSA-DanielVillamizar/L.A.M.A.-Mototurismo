@@ -53,8 +53,8 @@ public class Program
         // Registrar servicios de LAMA
         builder.Services.AddLamaServices(builder.Configuration);
 
-        // Registrar handler de autorización personalizado
-        builder.Services.AddSingleton<IAuthorizationHandler, ScopeAuthorizationHandler>();
+        // Registrar handler de autorización personalizado (SCOPED - no Singleton)
+        builder.Services.AddScoped<IAuthorizationHandler, ScopeAuthorizationHandler>();
 
         // Configurar políticas de autorización basadas en roles y scopes
         builder.Services.AddAuthorization(options =>
