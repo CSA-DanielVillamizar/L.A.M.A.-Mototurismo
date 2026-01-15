@@ -7,6 +7,7 @@ import type {
   MemberSearchResult,
   Vehicle,
   EvidenceUploadResponse,
+  UploadEvidenceRequest,
 } from '@/types/api';
 
 export default function EvidenceUploadForm() {
@@ -32,6 +33,7 @@ export default function EvidenceUploadForm() {
     unit: 'Kilometers' as 'Miles' | 'Kilometers',
     readingDate: '',
     notes: '',
+    trike: 'no' as 'yes' | 'no',
   });
 
   const [pilotPhoto, setPilotPhoto] = useState<File | null>(null);
@@ -176,9 +178,8 @@ export default function EvidenceUploadForm() {
     try {
       setSubmitting(true);
 
-      const request = {
+      const request: UploadEvidenceRequest = {
         eventId: parseInt(formData.eventId),
-        memberId: parseInt(formData.memberId),
         vehicleId: parseInt(formData.vehicleId),
         evidenceType: formData.evidenceType,
         pilotWithBikePhoto: pilotPhoto!,
@@ -187,6 +188,9 @@ export default function EvidenceUploadForm() {
         unit: formData.unit,
         readingDate: formData.readingDate || undefined,
         notes: formData.notes || undefined,
+        licPlate: '',
+        motorcycleData: '',
+        trike: formData.trike === 'yes',
       };
 
       const response = await apiClient.uploadEvidence(request);
@@ -217,6 +221,7 @@ export default function EvidenceUploadForm() {
       unit: 'Kilometers',
       readingDate: '',
       notes: '',
+      trike: 'no',
     });
     setPilotPhoto(null);
     setOdometerPhoto(null);
@@ -406,6 +411,27 @@ export default function EvidenceUploadForm() {
             <option value="START_YEAR">Inicio de Año (START_YEAR)</option>
             <option value="CUTOFF">Corte (CUTOFF)</option>
           </select>
+        </div>
+
+        {/* Tipo de Vehículo: Triciclo o Motocicleta */}
+        <div>
+          <label htmlFor="trike" className="block text-sm font-medium text-gray-700 mb-2">
+            ¿Es Triciclo? <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="trike"
+            name="trike"
+            value={formData.trike}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          >
+            <option value="no">No - Motocicleta Normal</option>
+            <option value="yes">Sí - Triciclo</option>
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Indica si el vehículo es un triciclo o una motocicleta convencional
+          </p>
         </div>
 
         {/* Foto: Piloto con Moto */}

@@ -46,23 +46,42 @@ export interface Vehicle {
 }
 
 /**
+ * Asistente a un evento
+ */
+export interface Attendee {
+  attendanceId: number;
+  eventId: number;
+  memberId: number;
+  vehicleId: number;
+  memberName: string;
+  vehicleInfo: string;
+  order?: number;
+  status: string;
+  confirmedAt?: string;
+}
+
+/**
  * Request para subir evidencia
  */
 export interface UploadEvidenceRequest {
   eventId: number;
-    order?: number; // Número de orden del miembro (nuevo)
   vehicleId: number;
   evidenceType: 'START_YEAR' | 'CUTOFF';
   pilotWithBikePhoto: File;
   odometerCloseupPhoto: File;
   odometerReading: number;
   unit: 'Miles' | 'Kilometers';
-  readingDate?: string; // DateOnly en formato YYYY-MM-DD
+  readingDate?: string;
   notes?: string;
-    licPlate: string; // Cambiado a licPlate
-    motorcycleData: string; // "Marca Model Año Color"
-    trike: boolean; // Nuevo campo para indicar si es un trike
-    displayName?: string; // Generado automáticamente "MotorcycleData - LicPlate"
+  licPlate: string;
+  motorcycleData: string;
+  trike: boolean;
+}
+
+/**
+ * Response de subida de evidencia
+ */
+export interface EvidenceUploadResponse {
   message: string;
   pointsAwarded: number;
   pointsPerEvent: number;

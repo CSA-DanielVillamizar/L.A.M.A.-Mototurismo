@@ -3,6 +3,10 @@ import type {
   UploadEvidenceRequest,
   EvidenceUploadResponse,
   ApiError,
+  Event,
+  MemberSearchResult,
+  Vehicle,
+  Attendee,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
@@ -12,10 +16,6 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5
  */
 class ApiClient {
   private baseUrl: string;
-  Event,
-  MemberSearchResult,
-  Vehicle,
-  Attendee,
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
@@ -90,13 +90,13 @@ class ApiClient {
     const formData = new FormData();
 
     // Append form fields
-    formData.append('memberId', request.memberId.toString());
     formData.append('vehicleId', request.vehicleId.toString());
     formData.append('evidenceType', request.evidenceType);
     formData.append('pilotWithBikePhoto', request.pilotWithBikePhoto);
     formData.append('odometerCloseupPhoto', request.odometerCloseupPhoto);
     formData.append('odometerReading', request.odometerReading.toString());
     formData.append('unit', request.unit);
+    formData.append('trike', request.trike.toString());
 
     if (request.readingDate) {
       formData.append('readingDate', request.readingDate);
@@ -131,6 +131,24 @@ class ApiClient {
    */
   async getEvents(): Promise<Event[]> {
     const response = await fetch(`${this.baseUrl}/api/events`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Obtener eventos por año
+   */
+  async getEventsByYear(year: number): Promise<Event[]> {
+    const response = await fetch(`${this.baseUrl}/api/events?year=${year}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -190,6 +208,31 @@ class ApiClient {
       if (response.status === 404) {
         return []; // Miembro no encontrado
       }
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Obtener asistentes de un evento
+   */
+  async getEventAttendees(
+    eventId: number, 
+    status?: 'PENDING' | 'CONFIRMED'
+  ): Promise<Attendee[]> {
+    const url = status 
+      ? `${this.baseUrl}/api/events/${eventId}/attendees?status=${status}`
+      : `${this.baseUrl}/api/events/${eventId}/attendees`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
       throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
 

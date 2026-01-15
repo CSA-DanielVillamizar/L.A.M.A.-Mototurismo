@@ -78,7 +78,7 @@ export function MemberSearchAutocomplete({
       try {
         setLoading(true);
         setError(null);
-        const searchResults = await apiClient.adminSearchMembers(searchTerm);
+        const searchResults = await apiClient.searchMembers(searchTerm);
         setResults(searchResults);
         setIsOpen(true);
       } catch (err) {
@@ -112,7 +112,7 @@ export function MemberSearchAutocomplete({
   const handleSelect = useCallback(
     (member: MemberSearchResult) => {
       onMemberSelect(member);
-      setQuery(`${member.fullName} (#${member.order || member.memberId})`);
+      setQuery(`${member.fullName} (#${member.memberId})`);
       setIsOpen(false);
       setResults([]);
     },
@@ -158,7 +158,7 @@ export function MemberSearchAutocomplete({
                 className="w-full px-4 py-3 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
               >
                 <div className="font-medium text-gray-900">
-                  {member.fullName} #{member.order || member.memberId}
+                  {member.fullName} #{member.memberId}
                 </div>
                 <div className="text-sm text-gray-500">
                   Estado: {member.status} • Capítulo: {member.chapterId}

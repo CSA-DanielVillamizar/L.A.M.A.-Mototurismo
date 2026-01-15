@@ -52,7 +52,7 @@ export function VehicleSelector({
       try {
         setLoading(true);
         setError(null);
-        const vehiclesData = await apiClient.adminGetMemberVehicles(memberId);
+        const vehiclesData = await apiClient.getMemberVehicles(memberId);
         setVehicles(vehiclesData);
 
         // Limpiar selección si hay cambio de miembro
@@ -112,7 +112,7 @@ export function VehicleSelector({
           </option>
           {vehicles.map((vehicle) => (
             <option key={vehicle.vehicleId} value={vehicle.vehicleId}>
-              {vehicle.motorcycleData} - {vehicle.licPlate}{vehicle.trike ? ' (Trike)' : ''}
+              {vehicle.displayName}
             </option>
           ))}
         </select>

@@ -164,7 +164,7 @@ export default function QueuePage() {
                             <td className="px-6 py-4">
                               <div>
                                 <p className="font-semibold text-gray-900">
-                                  {attendee.completeNames}
+                                  {attendee.memberName}
                                 </p>
                                 <p className="text-sm text-gray-500">
                                   #{attendee.order} • ID: {attendee.memberId}
@@ -174,9 +174,8 @@ export default function QueuePage() {
                             <td className="px-6 py-4">
                               <div>
                                 <p className="font-medium text-gray-900">
-                                  {attendee.motorcycleData}
+                                  {attendee.vehicleInfo}
                                 </p>
-                                <p className="text-sm text-gray-500">{attendee.licPlate}</p>
                               </div>
                             </td>
                             <td className="px-6 py-4">

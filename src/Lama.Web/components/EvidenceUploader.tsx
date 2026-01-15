@@ -115,7 +115,6 @@ export function EvidenceUploader({
 
         const response = await apiClient.uploadEvidence({
           eventId,
-          memberId,
           vehicleId,
           evidenceType,
           pilotWithBikePhoto: pilotWithBikePhoto!,
@@ -123,6 +122,9 @@ export function EvidenceUploader({
           odometerReading: parseFloat(odometerReading),
           unit,
           notes: notes || undefined,
+          licPlate: '',
+          motorcycleData: '',
+          trike: false,
         });
 
         onSuccess(response);
