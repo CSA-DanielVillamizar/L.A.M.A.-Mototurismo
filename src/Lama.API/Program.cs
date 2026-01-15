@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Identity.Web;
 using Lama.API.Extensions;
 using Lama.API.Middleware;
+using Lama.API.Authorization;
 using Lama.Infrastructure.Options;
+using Lama.Domain.Entities;
 
 namespace Lama.API;
 
@@ -49,6 +52,49 @@ public class Program
 
         // Registrar servicios de LAMA
         builder.Services.AddLamaServices(builder.Configuration);
+
+        // Registrar handler de autorización personalizado
+        builder.Services.AddSingleton<IAuthorizationHandler, ScopeAuthorizationHandler>();
+
+        // Configurar políticas de autorización basadas en roles y scopes
+        builder.Services.AddAuthorization(options =>
+        {
+            // Política: Validar eventos - requiere ser MTO o superior del capítulo
+            options.AddPolicy("CanValidateEvent", policy =>
+                policy.Requirements.Add(new ResourceAuthorizationRequirement(
+                    RoleType.MTO_CHAPTER, 
+                    ScopeType.CHAPTER)));
+
+            // Política: Gestionar capítulo - requiere ser Admin de capítulo o superior
+            options.AddPolicy("CanManageChapter", policy =>
+                policy.Requirements.Add(new ResourceAuthorizationRequirement(
+                    RoleType.ADMIN_CHAPTER,
+                    ScopeType.CHAPTER)));
+
+            // Política: Gestionar país - requiere ser Admin nacional o superior
+            options.AddPolicy("CanManageCountry", policy =>
+                policy.Requirements.Add(new ResourceAuthorizationRequirement(
+                    RoleType.ADMIN_NATIONAL,
+                    ScopeType.COUNTRY)));
+
+            // Política: Gestionar continente - requiere ser Admin continental o superior
+            options.AddPolicy("CanManageContinent", policy =>
+                policy.Requirements.Add(new ResourceAuthorizationRequirement(
+                    RoleType.ADMIN_CONTINENT,
+                    ScopeType.CONTINENT)));
+
+            // Política: Acceso global - requiere ser Admin internacional o superior
+            options.AddPolicy("CanManageGlobal", policy =>
+                policy.Requirements.Add(new ResourceAuthorizationRequirement(
+                    RoleType.ADMIN_INTERNATIONAL,
+                    ScopeType.GLOBAL)));
+
+            // Política: Super Admin - solo para SUPER_ADMIN
+            options.AddPolicy("IsSuperAdmin", policy =>
+                policy.Requirements.Add(new ResourceAuthorizationRequirement(
+                    RoleType.SUPER_ADMIN,
+                    ScopeType.GLOBAL)));
+        });
 
         // Configurar CORS (opcional)
         builder.Services.AddCors(options =>

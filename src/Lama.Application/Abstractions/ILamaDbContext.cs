@@ -40,6 +40,16 @@ public interface ILamaDbContext
     DbSet<IdentityUser> IdentityUsers { get; }
 
     /// <summary>
+    /// DbSet para la entidad UserRole (roles asignados a usuarios)
+    /// </summary>
+    DbSet<UserRole> UserRoles { get; }
+
+    /// <summary>
+    /// DbSet para la entidad UserScope (scopes asignados a usuarios)
+    /// </summary>
+    DbSet<UserScope> UserScopes { get; }
+
+    /// <summary>
     /// Guarda los cambios en la base de datos de forma asincrónica
     /// </summary>
     /// <param name="cancellationToken">Token de cancelación</param>

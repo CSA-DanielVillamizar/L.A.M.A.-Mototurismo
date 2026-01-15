@@ -54,6 +54,9 @@ public static class ServiceCollectionExtensions
         // Identity User Service: Sincroniza usuarios de Entra ID con base de datos local
         services.AddScoped<IIdentityUserService, IdentityUserService>();
 
+        // Authorization Service: Gestiona roles y scopes de usuarios
+        services.AddScoped<IUserAuthorizationService, UserAuthorizationService>();
+
         return services;
     }
 }

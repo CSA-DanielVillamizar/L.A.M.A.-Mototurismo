@@ -50,6 +50,12 @@ public class LamaDbContext : DbContext, ILamaDbContext
     /// <summary>Tabla de Identidades de usuarios (vinculación con Entra ID)</summary>
     public DbSet<IdentityUser> IdentityUsers { get; set; } = null!;
 
+    /// <summary>Tabla de Roles de Usuarios (asignación de roles jerárquicos con auditoría)</summary>
+    public DbSet<UserRole> UserRoles { get; set; } = null!;
+
+    /// <summary>Tabla de Scopes de Usuarios (asignación de ámbitos territoriales con auditoría)</summary>
+    public DbSet<UserScope> UserScopes { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -63,6 +69,8 @@ public class LamaDbContext : DbContext, ILamaDbContext
         modelBuilder.ApplyConfiguration(new AttendanceConfiguration());
         modelBuilder.ApplyConfiguration(new ConfigurationConfiguration());
         modelBuilder.ApplyConfiguration(new IdentityUserConfiguration());
+        modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
+        modelBuilder.ApplyConfiguration(new UserScopeConfiguration());
 
         // Query Filters para Multi-Tenancy
         // Estas se aplican automáticamente a todas las queries, sin necesidad de modificar los repositorios
@@ -83,6 +91,12 @@ public class LamaDbContext : DbContext, ILamaDbContext
 
             // IdentityUsers: filtrar por TenantId actual
             modelBuilder.Entity<IdentityUser>().HasQueryFilter(iu => iu.TenantId == _tenantProvider.CurrentTenantId);
+
+            // UserRoles: filtrar por TenantId actual
+            modelBuilder.Entity<UserRole>().HasQueryFilter(ur => ur.TenantId == _tenantProvider.CurrentTenantId);
+
+            // UserScopes: filtrar por TenantId actual
+            modelBuilder.Entity<UserScope>().HasQueryFilter(us => us.TenantId == _tenantProvider.CurrentTenantId);
         }
     }
 }
