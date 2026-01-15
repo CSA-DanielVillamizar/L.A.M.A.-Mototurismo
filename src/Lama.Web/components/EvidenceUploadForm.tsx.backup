@@ -1,0 +1,491 @@
+'use client';
+
+import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import { apiClient } from '@/lib/api-client';
+import type { MemberStatusType, UploadEvidenceRequest, EvidenceUploadResponse } from '@/types/api';
+
+export default function EvidenceUploadForm() {
+  // Estado para dropdowns
+  const [statusTypes, setStatusTypes] = useState<MemberStatusType[]>([]);
+  const [loadingStatuses, setLoadingStatuses] = useState(true);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  // Estado del formulario
+  const [formData, setFormData] = useState({
+    eventId: '',
+    memberId: '',
+    vehicleId: '',
+    evidenceType: 'START_YEAR' as 'START_YEAR' | 'CUTOFF',
+    odometerReading: '',
+    unit: 'Kilometers' as 'Miles' | 'Kilometers',
+    readingDate: '',
+    notes: '',
+  });
+
+  const [pilotPhoto, setPilotPhoto] = useState<File | null>(null);
+  const [odometerPhoto, setOdometerPhoto] = useState<File | null>(null);
+
+  // Estado de submission
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<EvidenceUploadResponse | null>(null);
+
+  // Cargar tipos de estado al montar
+  useEffect(() => {
+    loadStatusTypes();
+  }, []);
+
+  const loadStatusTypes = async () => {
+    try {
+      setLoadingStatuses(true);
+      setStatusError(null);
+      const types = await apiClient.getMemberStatusTypes();
+      setStatusTypes(types);
+    } catch (error) {
+      setStatusError(
+        error instanceof Error ? error.message : 'Error cargando tipos de estado'
+      );
+    } finally {
+      setLoadingStatuses(false);
+    }
+  };
+
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePilotPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPilotPhoto(e.target.files[0]);
+    }
+  };
+
+  const handleOdometerPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setOdometerPhoto(e.target.files[0]);
+    }
+  };
+
+  const validateForm = (): string | null => {
+    if (!formData.eventId || parseInt(formData.eventId) <= 0) {
+      return 'Event ID es requerido y debe ser mayor a 0';
+    }
+    if (!formData.memberId || parseInt(formData.memberId) <= 0) {
+      return 'Member ID es requerido y debe ser mayor a 0';
+    }
+    if (!formData.vehicleId || parseInt(formData.vehicleId) <= 0) {
+      return 'Vehicle ID es requerido y debe ser mayor a 0';
+    }
+    if (!pilotPhoto) {
+      return 'Foto del piloto con moto es requerida';
+    }
+    if (!odometerPhoto) {
+      return 'Foto del odómetro es requerida';
+    }
+    if (!formData.odometerReading || parseFloat(formData.odometerReading) <= 0) {
+      return 'Lectura del odómetro es requerida y debe ser mayor a 0';
+    }
+    return null;
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // Limpiar estados previos
+    setSubmitError(null);
+    setSubmitSuccess(null);
+
+    // Validar
+    const validationError = validateForm();
+    if (validationError) {
+      setSubmitError(validationError);
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const request: UploadEvidenceRequest = {
+        eventId: parseInt(formData.eventId),
+        memberId: parseInt(formData.memberId),
+        vehicleId: parseInt(formData.vehicleId),
+        evidenceType: formData.evidenceType,
+        pilotWithBikePhoto: pilotPhoto!,
+        odometerCloseupPhoto: odometerPhoto!,
+        odometerReading: parseFloat(formData.odometerReading),
+        unit: formData.unit,
+        readingDate: formData.readingDate || undefined,
+        notes: formData.notes || undefined,
+      };
+
+      const response = await apiClient.uploadEvidence(request);
+      setSubmitSuccess(response);
+
+      // Limpiar formulario
+      setFormData({
+        eventId: '',
+        memberId: '',
+        vehicleId: '',
+        evidenceType: 'START_YEAR',
+        odometerReading: '',
+        unit: 'Kilometers',
+        readingDate: '',
+        notes: '',
+      });
+      setPilotPhoto(null);
+      setOdometerPhoto(null);
+
+      // Resetear inputs de archivos
+      const pilotInput = document.getElementById('pilotPhoto') as HTMLInputElement;
+      const odometerInput = document.getElementById('odometerPhoto') as HTMLInputElement;
+      if (pilotInput) pilotInput.value = '';
+      if (odometerInput) odometerInput.value = '';
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : 'Error desconocido al subir evidencia'
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-3xl font-bold text-gray-900 mb-8">
+        Subir Evidencia de Asistencia
+      </h1>
+
+      {/* Status Types Info */}
+      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h2 className="text-lg font-semibold text-blue-900 mb-2">
+          Tipos de Estado Disponibles
+        </h2>
+        {loadingStatuses && (
+          <p className="text-blue-700">Cargando tipos de estado...</p>
+        )}
+        {statusError && (
+          <div className="text-red-600">
+            <p className="font-medium">Error:</p>
+            <p>{statusError}</p>
+            <button
+              onClick={loadStatusTypes}
+              className="mt-2 text-sm underline hover:no-underline"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+        {!loadingStatuses && !statusError && (
+          <p className="text-blue-700">
+            {statusTypes.length} tipos de estado cargados desde el backend
+          </p>
+        )}
+      </div>
+
+      {/* Success Message */}
+      {submitSuccess && (
+        <div className="mb-6 p-6 bg-green-50 border border-green-200 rounded-lg">
+          <h3 className="text-xl font-bold text-green-900 mb-3">
+            ✅ Evidencia Subida Exitosamente
+          </h3>
+          <div className="space-y-2 text-green-800">
+            <p>
+              <strong>Mensaje:</strong> {submitSuccess.message}
+            </p>
+            <p>
+              <strong>Puntos Totales:</strong> {submitSuccess.pointsAwarded}
+            </p>
+            <p>
+              <strong>Puntos por Evento:</strong> {submitSuccess.pointsPerEvent}
+            </p>
+            <p>
+              <strong>Puntos por Distancia:</strong> {submitSuccess.pointsPerDistance}
+            </p>
+            <p>
+              <strong>Clasificación:</strong> {submitSuccess.visitorClass}
+            </p>
+            <p>
+              <strong>Tipo de Evidencia:</strong> {submitSuccess.evidenceType}
+            </p>
+            <p>
+              <strong>ID de Asistencia:</strong> {submitSuccess.attendanceId}
+            </p>
+          </div>
+          <button
+            onClick={() => setSubmitSuccess(null)}
+            className="mt-4 text-sm text-green-700 underline hover:no-underline"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {submitError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h3 className="text-lg font-bold text-red-900 mb-2">❌ Error</h3>
+          <p className="text-red-700">{submitError}</p>
+          <button
+            onClick={() => setSubmitError(null)}
+            className="mt-2 text-sm text-red-700 underline hover:no-underline"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* IDs Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label
+              htmlFor="eventId"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Event ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              id="eventId"
+              name="eventId"
+              value={formData.eventId}
+              onChange={handleInputChange}
+              min="1"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="memberId"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Member ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              id="memberId"
+              name="memberId"
+              value={formData.memberId}
+              onChange={handleInputChange}
+              min="1"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="vehicleId"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Vehicle ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              id="vehicleId"
+              name="vehicleId"
+              value={formData.vehicleId}
+              onChange={handleInputChange}
+              min="1"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+        </div>
+
+        {/* Evidence Type */}
+        <div>
+          <label
+            htmlFor="evidenceType"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Tipo de Evidencia <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="evidenceType"
+            name="evidenceType"
+            value={formData.evidenceType}
+            onChange={handleInputChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="START_YEAR">Inicio de Año (START_YEAR)</option>
+            <option value="CUTOFF">Corte (CUTOFF)</option>
+          </select>
+        </div>
+
+        {/* Photo Uploads */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="pilotPhoto"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Foto: Piloto con Moto <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="file"
+              id="pilotPhoto"
+              accept="image/*"
+              onChange={handlePilotPhotoChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            {pilotPhoto && (
+              <p className="mt-1 text-sm text-gray-600">
+                Seleccionado: {pilotPhoto.name} ({(pilotPhoto.size / 1024).toFixed(1)} KB)
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="odometerPhoto"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Foto: Odómetro Close-up <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="file"
+              id="odometerPhoto"
+              accept="image/*"
+              onChange={handleOdometerPhotoChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            {odometerPhoto && (
+              <p className="mt-1 text-sm text-gray-600">
+                Seleccionado: {odometerPhoto.name} ({(odometerPhoto.size / 1024).toFixed(1)} KB)
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Odometer Reading */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="odometerReading"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Lectura del Odómetro <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              id="odometerReading"
+              name="odometerReading"
+              value={formData.odometerReading}
+              onChange={handleInputChange}
+              min="0"
+              step="0.01"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="unit"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Unidad <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="unit"
+              name="unit"
+              value={formData.unit}
+              onChange={handleInputChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="Kilometers">Kilómetros</option>
+              <option value="Miles">Millas</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Reading Date */}
+        <div>
+          <label
+            htmlFor="readingDate"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Fecha de Lectura (Opcional)
+          </label>
+          <input
+            type="date"
+            id="readingDate"
+            name="readingDate"
+            value={formData.readingDate}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label
+            htmlFor="notes"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Notas Adicionales (Opcional)
+          </label>
+          <textarea
+            id="notes"
+            name="notes"
+            value={formData.notes}
+            onChange={handleInputChange}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex items-center justify-end space-x-4">
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                eventId: '',
+                memberId: '',
+                vehicleId: '',
+                evidenceType: 'START_YEAR',
+                odometerReading: '',
+                unit: 'Kilometers',
+                readingDate: '',
+                notes: '',
+              });
+              setPilotPhoto(null);
+              setOdometerPhoto(null);
+              const pilotInput = document.getElementById('pilotPhoto') as HTMLInputElement;
+              const odometerInput = document.getElementById('odometerPhoto') as HTMLInputElement;
+              if (pilotInput) pilotInput.value = '';
+              if (odometerInput) odometerInput.value = '';
+            }}
+            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Limpiar
+          </button>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className={`px-6 py-2 rounded-md text-white font-medium transition-colors ${
+              submitting
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-primary-600 hover:bg-primary-700'
+            }`}
+          >
+            {submitting ? 'Subiendo...' : 'Subir Evidencia'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

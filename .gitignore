@@ -1,0 +1,40 @@
+# Archivos temporales de Excel
+~$*
+*.tmp
+*.lock
+
+# Carpeta INSUMOS (datos sensibles)
+INSUMOS/
+
+# NuGet
+bin/
+obj/
+.nuget/
+
+# Visual Studio
+.vs/
+*.user
+*.userprefs
+*.suo
+
+# Node/npm
+node_modules/
+.next/
+dist/
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

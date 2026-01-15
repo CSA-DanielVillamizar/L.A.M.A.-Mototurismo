@@ -1,0 +1,184 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║          INSTRUCCIONES PARA VALIDAR IMPLEMENTACIÓN CORRECTA                ║
+║             (Cómo verificar que Excel → SQL → EF coinciden)                ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+VALIDACIÓN 1: Verificar nombres en SQL
+═══════════════════════════════════════════════════════════════════════════════
+
+OPCIÓN A: Usar SQL Server Management Studio
+────────────────────────────────────────────────────────────────────────────
+1. Conectar a: P-DVILLAMIZARA / LamaDb
+2. Expandir: Tables → Members
+3. Expandir: Columns
+4. Revisar que aparecen:
+   ✓ [ Complete Names]    (Con espacio al inicio)
+   ✓ [ Country Birth]     (Con espacio al inicio)
+   ✓ [ In Lama Since]     (Con espacio al inicio)
+
+Repetir para: Vehicles, Events, Attendance
+
+OPCIÓN B: Ejecutar SQL script
+────────────────────────────────────────────────────────────────────────────
+Ejecutar en SQL Server:
+```sql
+SELECT COLUMN_NAME, ASCII(LEFT(COLUMN_NAME,1)) as FirstChar
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'Members'
+ORDER BY ORDINAL_POSITION;
+```
+
+Resultado esperado:
+┌──────────────────────┬───────────┐
+│ COLUMN_NAME          │ FirstChar │
+├──────────────────────┼───────────┤
+│  Complete Names      │    32     │ ← 32 = ESPACIO
+│  Country Birth       │    32     │ ← 32 = ESPACIO
+│  In Lama Since       │    32     │ ← 32 = ESPACIO
+└──────────────────────┴───────────┘
+
+Todos los ASCII 32 = Espacio inicial confirmado ✓
+
+═══════════════════════════════════════════════════════════════════════════════
+
+VALIDACIÓN 2: Verificar mapeos en EF Core
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Abrir archivo: src/Lama.Infrastructure/Data/Configurations/MemberConfiguration.cs
+2. Buscar: "HasColumnName"
+3. Verificar que contiene:
+   ✓ .HasColumnName(" Complete Names")    [Con espacio]
+   ✓ .HasColumnName(" Country Birth")     [Con espacio]
+   ✓ .HasColumnName(" In Lama Since")     [Con espacio]
+
+Repetir para:
+  - VehicleConfiguration.cs       [5 mappings con espacio]
+  - EventConfiguration.cs         [6 mappings con espacio]
+  - AttendanceConfiguration.cs    [4 mappings con espacio]
+
+═══════════════════════════════════════════════════════════════════════════════
+
+VALIDACIÓN 3: Verificar compilación
+═══════════════════════════════════════════════════════════════════════════════
+
+Ejecutar en terminal:
+```bash
+cd "C:\Users\DanielVillamizar\COR L.A.MA"
+dotnet build Lama.sln --configuration Release
+```
+
+Resultado esperado:
+```
+Build succeeded.
+
+0 Error(s)
+3 Warning(s)  [No relacionados a mapeos]
+```
+
+Si compila sin errores → Mapeos son correctos ✓
+
+═══════════════════════════════════════════════════════════════════════════════
+
+VALIDACIÓN 4: Verificar en Excel (OPCIONAL - Máxima Confianza)
+═══════════════════════════════════════════════════════════════════════════════
+
+Abrir: (COL) PEREIRA CORTE NACIONAL.xlsx
+Ir a: Sheet "ODOMETER"
+Fila 7: Son los encabezados
+Columnas a revisar:
+  ✓ Columna A: " Complete Names"      (Inicia con espacio)
+  ✓ Columna B: " Country Birth"       (Inicia con espacio)
+  ✓ Columna Z: " Motorcycle Data"     (Inicia con espacio)
+  ... etc
+
+Ejecutar Python (si pandas está disponible):
+```python
+import pandas as pd
+df = pd.read_excel(
+    r"C:\Users\DanielVillamizar\COR L.A.MA\INSUMOS\(COL) PEREIRA CORTE NACIONAL.xlsx",
+    sheet_name="ODOMETER",
+    header=6  # header row 7 (0-indexed)
+)
+
+for col in df.columns:
+    if ord(col[0]) == 32:  # ASCII 32 = espacio
+        print(f"ESPACIO: '{col}'")
+```
+
+Resultado esperado:
+```
+ESPACIO: ' Complete Names'
+ESPACIO: ' Country Birth'
+ESPACIO: ' In Lama Since'
+ESPACIO: ' Motorcycle Data'
+ESPACIO: ' Lic Plate'
+... [18 columnas totales]
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+
+VALIDACIÓN 5: Comparar Exactitud (1:1)
+═══════════════════════════════════════════════════════════════════════════════
+
+MATRIZ DE VALIDACIÓN:
+
+┌─────────────────────────┬─────────────────────────┬─────────────────────────┐
+│ Excel Encabezado        │ SQL Nombre              │ EF Core Mapping         │
+├─────────────────────────┼─────────────────────────┼─────────────────────────┤
+│ " Complete Names"       │ [ Complete Names]       │ " Complete Names"   ✓   │
+│ " Country Birth"        │ [ Country Birth]        │ " Country Birth"    ✓   │
+│ " In Lama Since"        │ [ In Lama Since]        │ " In Lama Since"    ✓   │
+│ " Motorcycle Data"      │ [ Motorcycle Data]      │ " Motorcycle Data"  ✓   │
+│ " Lic Plate"            │ [ Lic Plate]            │ " Lic Plate"        ✓   │
+│ " Trike"                │ [ Trike]                │ " Trike"            ✓   │
+│ " Starting Odometer"    │ [ Starting Odometer]    │ " Starting..."      ✓   │
+│ " Final Odometer"       │ [ Final Odometer]       │ " Final Odometer"   ✓   │
+│ " Event Start Date..."  │ [ Event Start Date...]  │ " Event Start..."   ✓   │
+│ " Name of the event"    │ [ Name of the event]    │ " Name of the..."   ✓   │
+│ " Mileage"              │ [ Mileage]              │ " Mileage"          ✓   │
+│ " Points per event"     │ [ Points per event]     │ " Points per..."    ✓   │
+│ " Points per Distance"  │ [ Points per Distance]  │ " Points per..."    ✓   │
+│ " Points awarded..."    │ [ Points awarded...]    │ " Points awarded"   ✓   │
+│ " Visitor Class"        │ [ Visitor Class]        │ " Visitor Class"    ✓   │
+└─────────────────────────┴─────────────────────────┴─────────────────────────┘
+
+✓ Todos los mapeos coinciden exactamente (1:1)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+LISTA DE VERIFICACIÓN RÁPIDA:
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] SQL tiene " Complete Names" (con espacio)
+[ ] SQL tiene " Country Birth" (con espacio)
+[ ] SQL tiene " In Lama Since" (con espacio)
+[ ] SQL tiene " Motorcycle Data" (con espacio)
+[ ] SQL tiene " Lic Plate" (con espacio)
+[ ] SQL tiene " Starting Odometer" (con espacio)
+[ ] SQL tiene " Final Odometer" (con espacio)
+[ ] EF Core MemberConfiguration tiene 3 HasColumnName(" ...")
+[ ] EF Core VehicleConfiguration tiene 5 HasColumnName(" ...")
+[ ] EF Core EventConfiguration tiene 6 HasColumnName(" ...")
+[ ] EF Core AttendanceConfiguration tiene 4 HasColumnName(" ...")
+[ ] dotnet build compila sin errores
+[ ] Excel PEREIRA tiene " Complete Names" en fila 7
+[ ] Excel PEREIRA tiene " Motorcycle Data" en fila 7
+
+SI TODOS LOS ITEMS ESTÁN MARCADOS: ✓ IMPLEMENTACIÓN CORRECTA
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CONCLUSIÓN:
+───────────────────────────────────────────────────────────────────────────────
+
+Si todas las validaciones son correctas:
+
+✅ SQL Schema coincide con Excel
+✅ EF Core Mappings coinciden con Excel
+✅ Compilación sin errores
+✅ Sistema está listo para:
+   • Cargar datos desde Excel
+   • Ejecutar operaciones CRUD
+   • Desplegar a producción
+
+═══════════════════════════════════════════════════════════════════════════════
