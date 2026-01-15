@@ -56,6 +56,9 @@ public class LamaDbContext : DbContext, ILamaDbContext
     /// <summary>Tabla de Scopes de Usuarios (asignación de ámbitos territoriales con auditoría)</summary>
     public DbSet<UserScope> UserScopes { get; set; } = null!;
 
+    /// <summary>Tabla de Evidencias (fotos de piloto + odómetro)</summary>
+    public DbSet<Evidence> Evidences { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -71,6 +74,7 @@ public class LamaDbContext : DbContext, ILamaDbContext
         modelBuilder.ApplyConfiguration(new IdentityUserConfiguration());
         modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
         modelBuilder.ApplyConfiguration(new UserScopeConfiguration());
+        modelBuilder.ApplyConfiguration(new EvidenceConfiguration());
 
         // Query Filters para Multi-Tenancy
         // Estas se aplican automáticamente a todas las queries, sin necesidad de modificar los repositorios
@@ -97,6 +101,9 @@ public class LamaDbContext : DbContext, ILamaDbContext
 
             // UserScopes: filtrar por TenantId actual
             modelBuilder.Entity<UserScope>().HasQueryFilter(us => us.TenantId == _tenantProvider.CurrentTenantId);
+
+            // Evidences: filtrar por TenantId actual
+            modelBuilder.Entity<Evidence>().HasQueryFilter(e => e.TenantId == _tenantProvider.CurrentTenantId);
         }
     }
 }

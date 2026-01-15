@@ -57,6 +57,20 @@ public static class ServiceCollectionExtensions
         // Authorization Service: Gestiona roles y scopes de usuarios
         services.AddScoped<IUserAuthorizationService, UserAuthorizationService>();
 
+        // Blob SAS Service: Genera SAS URLs para upload directo a Azure Blob
+        services.AddScoped<IBlobSasService, BlobSasService>();
+
+        // Azure Blob Service Client: Cliente para Azure Blob Storage
+        services.AddSingleton(sp =>
+        {
+            var connectionString = configuration.GetConnectionString("AzureStorage");
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException("AzureStorage connection string no configurada");
+            }
+            return new Azure.Storage.Blobs.BlobServiceClient(connectionString);
+        });
+
         return services;
     }
 }

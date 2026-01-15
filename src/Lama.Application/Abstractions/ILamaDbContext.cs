@@ -50,6 +50,11 @@ public interface ILamaDbContext
     DbSet<UserScope> UserScopes { get; }
 
     /// <summary>
+    /// DbSet para la entidad Evidence (evidencias fotográficas)
+    /// </summary>
+    DbSet<Evidence> Evidences { get; }
+
+    /// <summary>
     /// Guarda los cambios en la base de datos de forma asincrónica
     /// </summary>
     /// <param name="cancellationToken">Token de cancelación</param>
