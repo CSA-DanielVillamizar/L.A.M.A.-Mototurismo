@@ -50,6 +50,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPointsCalculatorService, PointsCalculatorService>();
         services.AddScoped<IBlobStorageService, FakeBlobStorageService>();
         services.AddScoped<IAttendanceConfirmationService, AttendanceConfirmationService>();
+        
+        // Identity User Service: Sincroniza usuarios de Entra ID con base de datos local
+        services.AddScoped<IIdentityUserService, IdentityUserService>();
 
         return services;
     }

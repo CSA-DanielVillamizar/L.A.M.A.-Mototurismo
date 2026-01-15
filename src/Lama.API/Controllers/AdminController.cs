@@ -7,6 +7,8 @@ namespace Lama.API.Controllers;
 /// <summary>
 /// Controlador para operaciones administrativas
 /// Endpoints para confirmación de asistencias con subida de evidencia
+/// En RELEASE: Requiere autenticación JWT de Entra ID (rol Admin)
+/// En DEBUG: Permite bypass con header X-Dev-Bypass: true para testing
 /// </summary>
 [ApiController]
 [Route("api/admin")]
@@ -15,9 +17,25 @@ public class AdminController(IAttendanceConfirmationService attendanceConfirmati
     private readonly IAttendanceConfirmationService _attendanceConfirmationService = attendanceConfirmationService;
 
     /// <summary>
+    /// Valida si el request tiene bypass válido para DEBUG mode
+    /// Header: X-Dev-Bypass: true SOLO funciona en DEBUG
+    /// </summary>
+    private bool IsValidDevBypass()
+    {
+#if DEBUG
+        // En DEBUG: permitir bypass con header X-Dev-Bypass: true
+        return Request.Headers.TryGetValue("X-Dev-Bypass", out var bypassValue) &&
+               bypassValue == "true";
+#else
+        // En RELEASE: nunca permitir bypass
+        return false;
+#endif
+    }
+
+    /// <summary>
     /// Sube evidencia fotográfica y confirma asistencia de un miembro a un evento
-    /// En Development mode (DEBUG), permite POST sin autenticación para testing
-    /// En Production, requiere rol MTO o Admin
+    /// En RELEASE: Requiere JWT Bearer token de Entra ID (rol Admin)
+    /// En DEBUG: Permite testing con header X-Dev-Bypass: true (sin autenticación)
     /// </summary>
     /// <param name="eventId">ID del evento</param>
     /// <param name="memberId">ID del miembro (from body)</param>
@@ -33,13 +51,15 @@ public class AdminController(IAttendanceConfirmationService attendanceConfirmati
     /// <response code="200">Asistencia confirmada exitosamente</response>
     /// <response code="400">Solicitud inválida o datos faltantes</response>
     /// <response code="404">Evento, miembro o vehículo no encontrado</response>
+    /// <response code="401">No autenticado (RELEASE) o bypass header inválido (DEBUG)</response>
     /// <response code="500">Error interno del servidor</response>
 #if !DEBUG
-    [Authorize(Roles = "MTO,Admin")] // Solo autenticación en Production
+    [Authorize(Roles = "Admin")] // En RELEASE: requiere JWT + rol Admin
 #endif
     [HttpPost("evidence/upload")]
     [ProducesResponseType(typeof(EvidenceUploadResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UploadEvidenceAsync(
@@ -55,6 +75,11 @@ public class AdminController(IAttendanceConfirmationService attendanceConfirmati
         [FromForm] string? notes = null,
         CancellationToken cancellationToken = default)
     {
+#if DEBUG
+        // En DEBUG: validar bypass header si no está autenticado
+        if (!User?.Identity?.IsAuthenticated == true && !IsValidDevBypass())
+            return Unauthorized(new { error = "Requiere autenticación JWT o header X-Dev-Bypass: true en DEBUG" });
+#endif
         // Validación básica
         if (eventId <= 0 || memberId <= 0 || vehicleId <= 0)
             return BadRequest("eventId, memberId y vehicleId son requeridos y deben ser > 0");

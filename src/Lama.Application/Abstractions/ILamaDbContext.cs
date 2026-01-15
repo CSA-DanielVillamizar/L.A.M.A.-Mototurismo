@@ -35,6 +35,11 @@ public interface ILamaDbContext
     DbSet<Attendance> Attendance { get; }
 
     /// <summary>
+    /// DbSet para la entidad IdentityUser (usuarios de Entra ID)
+    /// </summary>
+    DbSet<IdentityUser> IdentityUsers { get; }
+
+    /// <summary>
     /// Guarda los cambios en la base de datos de forma asincrónica
     /// </summary>
     /// <param name="cancellationToken">Token de cancelación</param>

@@ -47,6 +47,9 @@ public class LamaDbContext : DbContext, ILamaDbContext
     /// <summary>Tabla de Configuración</summary>
     public DbSet<Configuration> Configurations { get; set; } = null!;
 
+    /// <summary>Tabla de Identidades de usuarios (vinculación con Entra ID)</summary>
+    public DbSet<IdentityUser> IdentityUsers { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -59,6 +62,7 @@ public class LamaDbContext : DbContext, ILamaDbContext
         modelBuilder.ApplyConfiguration(new EventConfiguration());
         modelBuilder.ApplyConfiguration(new AttendanceConfiguration());
         modelBuilder.ApplyConfiguration(new ConfigurationConfiguration());
+        modelBuilder.ApplyConfiguration(new IdentityUserConfiguration());
 
         // Query Filters para Multi-Tenancy
         // Estas se aplican automáticamente a todas las queries, sin necesidad de modificar los repositorios
@@ -76,6 +80,9 @@ public class LamaDbContext : DbContext, ILamaDbContext
 
             // Attendance: filtrar por TenantId actual
             modelBuilder.Entity<Attendance>().HasQueryFilter(a => a.TenantId == _tenantProvider.CurrentTenantId);
+
+            // IdentityUsers: filtrar por TenantId actual
+            modelBuilder.Entity<IdentityUser>().HasQueryFilter(iu => iu.TenantId == _tenantProvider.CurrentTenantId);
         }
     }
 }
