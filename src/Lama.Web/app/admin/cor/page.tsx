@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import CORPageContent from './page-content';
+import { CORPageContent } from './page-content';
 
 /**
  * Página COR con Suspense para useSearchParams

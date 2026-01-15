@@ -18,6 +18,7 @@ export {
 export {
   Menu as IconMenu,
   X as IconClose,
+  X as IconX,
   ChevronDown as IconChevronDown,
   ChevronUp as IconChevronUp,
   ChevronLeft as IconChevronLeft,
