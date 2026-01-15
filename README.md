@@ -1,28 +1,154 @@
-# LAMA MOTOTURISMO - PLATAFORMA SAAS  
-## Instrucciones de Instalación y Ejecución
+# 🏍️ COR L.A.MA - Plataforma SaaS de Gestión Mototurística
+
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![Azure](https://img.shields.io/badge/Azure-Bicep%20IaC-0078D4?logo=microsoftazure)](https://azure.microsoft.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs)](https://nextjs.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+**Sistema APIM-ready de gestión mototurística** con arquitectura Clean, versionado API, infraestructura como código en Azure y CI/CD automatizado.
 
 ---
 
-## **CONTENIDO DE LA SOLUCIÓN**
+## 📋 Tabla de Contenidos
+
+- [🏗️ Arquitectura](#️-arquitectura)
+- [📁 Estructura del Proyecto](#-estructura-del-proyecto)
+- [🚀 Quick Start](#-quick-start)
+- [☁️ Despliegue en Azure](#️-despliegue-en-azure)
+- [🛠️ Desarrollo Local](#️-desarrollo-local)
+- [📚 Documentación](#-documentación)
+
+---
+
+## 🏗️ Arquitectura
+
+### Clean Architecture + Domain-Driven Design
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      Presentation                        │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │   Lama.API (ASP.NET Core 8)                      │   │
+│  │   - Controllers (REST API versioned /api/v1)     │   │
+│  │   - Swagger/OpenAPI con ejemplos                 │   │
+│  │   - ProblemDetails (RFC 7807)                    │   │
+│  │   - Kebab-case URLs + PascalCase JSON            │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│                      Application                         │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │   Lama.Application                               │   │
+│  │   - Use Cases / Services                         │   │
+│  │   - DTOs / ViewModels                            │   │
+│  │   - Interfaces (Repository, Service)             │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│                        Domain                            │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │   Lama.Domain                                    │   │
+│  │   - Entities (Activity, Membership, Evidence)    │   │
+│  │   - Value Objects                                │   │
+│  │   - Domain Events                                │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│                     Infrastructure                       │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │   Lama.Infrastructure (EF Core 8)                │   │
+│  │   - DbContext + Migrations                       │   │
+│  │   - Repository Implementations                   │   │
+│  │   - External Services (Azure Storage, Redis)     │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Infraestructura Azure
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                      Azure Resources                       │
+├────────────────────────────────────────────────────────────┤
+│  Frontend (Next.js)                                        │
+│  ┌──────────────────────────┐                             │
+│  │ Static Web App (Free)    │◄──── CDN Global             │
+│  │ - SSG + ISR              │                              │
+│  │ - GitHub auto-deploy     │                              │
+│  └──────────────────────────┘                             │
+│            │                                                │
+│            ▼ HTTPS                                          │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │          API (ASP.NET Core 8)                        │  │
+│  │  App Service (Basic B1 → Premium P1v3)              │  │
+│  │  - Managed Identity                                  │  │
+│  │  - KeyVault Integration                              │  │
+│  │  - Auto-scaling (prod)                               │  │
+│  │  - Always On + Health Checks                         │  │
+│  └─────────────────────────────────────────────────────┘  │
+│            │                  │                             │
+│            ▼                  ▼                             │
+│  ┌─────────────────┐  ┌─────────────────┐                │
+│  │ Azure SQL DB    │  │ Redis Cache     │                 │
+│  │ - S0 → S3       │  │ - C0 → C1       │                 │
+│  │ - Zone Redundant│  │ - SSL Enforced  │                 │
+│  │ - Auto-backup   │  │ - Persistence   │                 │
+│  └─────────────────┘  └─────────────────┘                │
+│            │                                                │
+│            ▼                                                │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │          Blob Storage (evidences)                    │  │
+│  │  - LRS → ZRS (prod)                                  │  │
+│  │  - Lifecycle management (730 days)                   │  │
+│  │  - CORS enabled                                      │  │
+│  └─────────────────────────────────────────────────────┘  │
+│                                                             │
+│  Security & Monitoring                                     │
+│  ┌─────────────────────┐  ┌────────────────────────────┐ │
+│  │ Key Vault           │  │ Application Insights       │ │
+│  │ - Soft Delete (90d) │  │ - Log Analytics Workspace  │ │
+│  │ - Purge Protection  │  │ - Metric Alerts            │ │
+│  │ - Access Policies   │  │ - 90-day retention (prod)  │ │
+│  └─────────────────────┘  └────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 Estructura del Proyecto
 
 ```
 COR L.A.MA/
-├── Lama.sln                    # Solución Visual Studio
 ├── src/
-│   ├── Lama.Domain/            # Domain Layer (Entities, Enums)
-│   ├── Lama.Application/       # Application Layer (Interfaces, Services, DTOs)
-│   ├── Lama.Infrastructure/    # Infrastructure (DbContext, Repos, Implementations)
-│   └── Lama.API/               # API Layer (Controllers, Program.cs)
+│   ├── Lama.Domain/            # Entidades, Value Objects, Enums
+│   ├── Lama.Application/       # Use Cases, DTOs, Interfaces
+│   ├── Lama.Infrastructure/    # EF Core, Repositories, Azure Services
+│   └── Lama.API/               # Controllers, Middlewares, Program.cs
+├── frontend/                    # Next.js App (TypeScript)
+│   ├── app/                    # App Router (Next.js 14)
+│   ├── components/             # React Components
+│   └── lib/                    # Utilities, API Client
 ├── tests/
-│   └── Lama.UnitTests/         # Unit Tests (xUnit, Moq)
+│   └── Lama.UnitTests/         # xUnit + Moq
+├── infra/                       # ⚡ Infrastructure as Code
+│   ├── bicep/
+│   │   ├── main.bicep          # Main orchestrator
+│   │   ├── modules/            # Bicep modules (sql, storage, etc.)
+│   │   └── parameters.*.bicepparam
+│   ├── scripts/                # Helper scripts (OIDC, secrets, validate)
+│   ├── README.md               # Arquitectura, costos, guías
+│   └── SETUP-GUIDE.md          # 🚀 Guía paso a paso
+├── .github/workflows/
+│   ├── deploy-infra.yml        # CI/CD para infraestructura
+│   └── deploy-app.yml          # CI/CD para aplicación
 ├── sql/
 │   ├── schema.sql              # Tablas, triggers, constraints
-│   └── views.sql               # Vistas de reporte (vw_MasterOdometerReport, vw_MemberGeneralRanking)
-├── python/
-│   └── migration_generator.py  # Script ETL para migrar datos desde Excel
-└── INSUMOS/
-    └── (COL) INDIVIDUAL REPORT - REGION NORTE.xlsm  # Datos fuente
-```
+│   └── views.sql               # Vistas de reporting
+└── python/
+    └── migration_generator.py  # ETL desde Excel legacy
 
 ---
 
@@ -46,119 +172,329 @@ COR L.A.MA/
 
 # En Query Window, ejecuta:
 CREATE DATABASE LamaDb;
-GO
-```
-
-### 1.2 Aplicar esquema SQL
-
-Ejecuta los scripts en orden:
-
-```bash
-# 1. Crear tablas y triggers
-sqlcmd -S (localdb)\mssqllocaldb -d LamaDb -i sql\schema.sql
-
-# 2. Crear vistas
-sqlcmd -S (localdb)\mssqllocaldb -d LamaDb -i sql\views.sql
-```
-
-**Nota**: Si usas **Azure SQL**, reemplaza la conexión:
-```bash
-sqlcmd -S <servidor>.database.windows.net -U <usuario> -P <contraseña> -d LamaDb -i sql\schema.sql
 ```
 
 ---
 
-## **PASO 2: CONFIGURAR CONEXIÓN A BASE DE DATOS**
+## 🚀 Quick Start
 
-Edita `src\Lama.API\appsettings.json`:
+### Opción A: Despliegue Completo en Azure (Recomendado)
 
-```json
-{
-  "ConnectionStrings": {
-    "LamaDb": "Server=(localdb)\\mssqllocaldb;Database=LamaDb;Trusted_Connection=true;"
-  }
-}
+```bash
+# 1. Clonar repositorio
+git clone https://github.com/tu-usuario/COR-LAMA.git
+cd COR-LAMA
+
+# 2. Configurar OIDC y GitHub Environments (una sola vez)
+cd infra/scripts
+./setup-oidc.sh  # Sigue las instrucciones
+cd ../..
+
+# 3. Desplegar infraestructura (automático con push)
+git add .
+git commit -m "feat: initial commit"
+git push origin main
+
+# 4. Verificar despliegue
+cd infra/scripts
+./validate-deployment.sh dev
+
+# ✅ Listo! API en: https://app-lama-dev.azurewebsites.net
 ```
 
-**Para Azure SQL:**
-```json
-{
-  "ConnectionStrings": {
-    "LamaDb": "Server=<servidor>.database.windows.net;Database=LamaDb;User Id=<usuario>;Password=<contraseña>;"
-  }
-}
+**📖 Guía completa**: [`infra/SETUP-GUIDE.md`](infra/SETUP-GUIDE.md)
+
+### Opción B: Desarrollo Local (Sin Azure)
+
+```bash
+# 1. Requisitos previos
+# - .NET 8 SDK
+# - SQL Server (LocalDB o Express)
+# - Node.js 20+
+
+# 2. Configurar base de datos
+cd sql
+sqlcmd -S (localdb)\mssqllocaldb -Q "CREATE DATABASE LamaDb"
+sqlcmd -S (localdb)\mssqllocaldb -d LamaDb -i schema.sql
+sqlcmd -S (localdb)\mssqllocaldb -d LamaDb -i views.sql
+
+# 3. Restaurar dependencias
+cd ../src
+dotnet restore Lama.API/Lama.API.csproj
+
+# 4. Ejecutar migraciones EF Core
+cd Lama.Infrastructure
+dotnet ef database update --startup-project ../Lama.API
+
+# 5. Ejecutar API
+cd ../Lama.API
+dotnet run
+
+# 6. Ejecutar Frontend (otra terminal)
+cd ../../frontend
+npm install
+npm run dev
+
+# ✅ API: http://localhost:5000/swagger
+# ✅ Frontend: http://localhost:3000
 ```
 
 ---
 
-## **PASO 3: MIGRACIÓN DE DATOS (OPCIONAL)**
+## ☁️ Despliegue en Azure
 
-Si tienes datos en Excel para migrar:
+### Infraestructura como Código (Bicep)
 
-### 3.1 Instalar dependencias Python
+**Multi-ambiente**: dev, test, prod con SKUs diferenciados
+
+| Recurso | SKU Dev | SKU Test | SKU Prod | Costo Mensual |
+|---------|---------|----------|----------|---------------|
+| SQL Database | S0 (10 DTU) | S1 (20 DTU) | S3 (100 DTU) ZRS | $15 → $200 |
+| App Service | Basic B1 | Standard S1 | Premium P1v3 | $13 → $105 |
+| Redis Cache | C0 (250MB) | C0 (250MB) | C1 (1GB) Standard | $17 → $75 |
+| Storage | LRS | LRS | ZRS + lifecycle | $2 → $5 |
+| Static Web App | Free | Free | Standard (CDN) | $0 → $9 |
+| **Total/mes** | **~$51** | **~$114** | **~$409** | |
+
+### CI/CD Automatizado (GitHub Actions)
+
+**Workflow infraestructura** ([`.github/workflows/deploy-infra.yml`](.github/workflows/deploy-infra.yml)):
+- ✅ Validación Bicep en cada PR
+- 🚀 Deploy automático a DEV en push a `main`
+- 🔐 Deploy manual a TEST/PROD con aprobación
+- 🧪 What-if analysis antes de deploy
+- 🧹 Destroy job para cleanup
+
+**Workflow aplicación** ([`.github/workflows/deploy-app.yml`](.github/workflows/deploy-app.yml)):
+- 🔨 Build .NET 8 + Next.js en paralelo
+- 📦 Deploy API a App Service + Slot swap (prod)
+- 🌐 Deploy Frontend a Static Web App
+- 🗄️ EF Core migrations automáticas
+- 🩺 Health checks post-deployment
+
+### Seguridad
+
+- 🔑 **OIDC Federation** (sin credenciales en GitHub)
+- 🔐 **Azure Key Vault** para secretos
+- 🛡️ **Managed Identity** (App Service → KeyVault/SQL)
+- 🔒 **SSL/TLS enforced** (Redis, SQL, Storage)
+- 📊 **Application Insights** + Log Analytics
+
+---
+
+## 🛠️ Desarrollo Local
+
+### Prerrequisitos
+
+- **Visual Studio 2022** (v17.8+) o **VS Code** + .NET CLI
+- **.NET 8 SDK** ([descargar](https://dotnet.microsoft.com/download/dotnet/8.0))
+- **SQL Server 2022** o **LocalDB** (incluido en VS)
+- **Node.js 20+** ([descargar](https://nodejs.org/))
+- **Azure CLI** (opcional, para testing con recursos Azure)
+
+### Configuración Inicial
+
+#### 1. Base de Datos Local
 
 ```bash
+# Crear base de datos
+sqlcmd -S (localdb)\mssqllocaldb -Q "CREATE DATABASE LamaDb"
+
+# Aplicar esquema SQL
+cd sql
+sqlcmd -S (localdb)\mssqllocaldb -d LamaDb -i schema.sql
+sqlcmd -S (localdb)\mssqllocaldb -d LamaDb -i views.sql
+
+# O usar EF Core Migrations (recomendado):
+cd ../src/Lama.Infrastructure
+dotnet ef migrations add InitialCreate --startup-project ../Lama.API
+dotnet ef database update --startup-project ../Lama.API
+```
+
+#### 2. Configurar Connection Strings
+
+Edita [`src/Lama.API/appsettings.Development.json`](src/Lama.API/appsettings.Development.json):
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=LamaDb;Trusted_Connection=true;",
+    "RedisConnection": "localhost:6379"
+  },
+  "BlobStorage": {
+    "ConnectionString": "UseDevelopmentStorage=true",
+    "ContainerName": "evidences"
+  }
+}
+```
+
+**Nota**: Para Azure Storage local, instala [Azurite](https://learn.microsoft.com/azure/storage/common/storage-use-azurite):
+```bash
+npm install -g azurite
+azurite --silent
+```
+
+#### 3. Migración de Datos desde Excel (Opcional)
+
+Si tienes datos legacy en Excel:
+
+```bash
+# Instalar dependencias Python
 pip install pandas openpyxl
-```
 
-### 3.2 Ejecutar script de migración
-
-```bash
+# Ejecutar script de migración
 cd python
 python migration_generator.py
+
+# Aplicar SQL generado
+sqlcmd -S (localdb)\mssqllocaldb -d LamaDb -i migration_script.sql
 ```
 
-Esto genera `migration_script.sql`. Aplícalo:
+#### 4. Ejecutar API + Frontend
 
 ```bash
-sqlcmd -S (localdb)\mssqllocaldb -d LamaDb -i python\migration_script.sql
+# Terminal 1: API
+cd src/Lama.API
+dotnet watch run  # Hot reload habilitado
+
+# Terminal 2: Frontend
+cd frontend
+npm run dev
+
+# ✅ API Swagger: https://localhost:7001/swagger
+# ✅ Frontend: http://localhost:3000
+```
+
+### Endpoints API
+
+**Base URL (local)**: `https://localhost:7001/api/v1`
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/activities` | Lista todas las actividades |
+| GET | `/activities/{id}` | Obtiene actividad por ID |
+| POST | `/activities` | Crea nueva actividad |
+| PUT | `/activities/{id}` | Actualiza actividad |
+| DELETE | `/activities/{id}` | Elimina actividad |
+| GET | `/memberships` | Lista membresías activas |
+| GET | `/evidences/by-activity/{id}` | Evidencias de una actividad |
+| POST | `/evidences/upload` | Sube foto a Azure Blob Storage |
+
+**Swagger UI**: `https://localhost:7001/swagger/index.html`
+
+### Testing
+
+```bash
+# Ejecutar tests unitarios
+dotnet test tests/Lama.UnitTests/
+
+# Con cobertura
+dotnet test /p:CollectCoverage=true /p:CoverageReportsFormat=opencover
+
+# Filtrar por categoría
+dotnet test --filter Category=Unit
 ```
 
 ---
 
-## **PASO 4: COMPILAR Y EJECUTAR**
+## 📚 Documentación
 
-### 4.1 Restaurar dependencias
+### Infraestructura
 
-```bash
-# Desde la raíz del proyecto
-dotnet restore
+- 📖 **[`infra/README.md`](infra/README.md)**: Arquitectura detallada, costos, recursos Azure
+- 🚀 **[`infra/SETUP-GUIDE.md`](infra/SETUP-GUIDE.md)**: Guía paso a paso para configurar OIDC y desplegar
+- 🔧 **Scripts auxiliares**:
+  - [`setup-oidc.sh`](infra/scripts/setup-oidc.sh): Configura OIDC en Azure AD
+  - [`get-secrets.ps1`](infra/scripts/get-secrets.ps1): Obtiene secretos de KeyVault para debug local
+  - [`get-swa-tokens.ps1`](infra/scripts/get-swa-tokens.ps1): Obtiene API tokens de Static Web Apps
+  - [`validate-deployment.sh`](infra/scripts/validate-deployment.sh): Valida que todos los recursos funcionen
+
+### API
+
+- **OpenAPI Spec**: `https://app-lama-{env}.azurewebsites.net/swagger/v1/swagger.json`
+- **Versionado**: `/api/v1` (actual), `/api/v2` (futuro)
+- **Autenticación**: Bearer Token (Azure AD B2C - próximamente)
+- **Rate Limiting**: 1000 requests/min (prod)
+
+### Arquitectura
+
+```
+Clean Architecture Layers:
+
+Domain (Core)
+  ├── Entities: Activity, Membership, Evidence, Report
+  ├── Enums: ActivityType, MembershipStatus, Gender
+  └── Interfaces: IEntity, IRepository<T>
+
+Application (Use Cases)
+  ├── Services: ActivityService, EvidenceService
+  ├── DTOs: ActivityDTO, MembershipDTO
+  └── Interfaces: IActivityService, IBlobStorageService
+
+Infrastructure (External)
+  ├── Persistence: LamaDbContext, EF Core Repositories
+  ├── Azure: BlobStorageService, RedisCacheService
+  └── Migrations: EF Core code-first migrations
+
+API (Presentation)
+  ├── Controllers: ActivitiesController, MembershipsController
+  ├── Middlewares: ExceptionHandlingMiddleware
+  └── Configuration: Swagger, CORS, ProblemDetails
 ```
 
-### 4.2 Compilar solución
+### Database Schema
 
-```bash
-dotnet build
-```
+**Principales tablas**:
+- `Activities`: Actividades mototurísticas (ODO, KM, fecha)
+- `Memberships`: Información de miembros
+- `Evidences`: Metadata de fotos (Azure Blob Storage)
+- `Reports`: Reportes históricos
 
-### 4.3 Ejecutar API
-
-```bash
-cd src\Lama.API
-dotnet run
-```
-
-Deberías ver:
-```
-info: Microsoft.Hosting.Lifetime[14]
-      Now listening on: https://localhost:7001
-```
-
-Abre el navegador en: **https://localhost:7001/swagger**
+**Vistas SQL**:
+- `vw_MasterOdometerReport`: Odómetro maestro consolidado
+- `vw_MemberGeneralRanking`: Ranking general por KM recorridos
 
 ---
 
-## **PASO 5: EJECUTAR UNIT TESTS**
+## 🤝 Contribuir
+
+### Branching Strategy
 
 ```bash
-# Desde la raíz del proyecto
-dotnet test tests\Lama.UnitTests\
+main            # Producción (protegido)
+  ├── develop   # Integración continua
+  │   ├── feature/nueva-funcionalidad
+  │   ├── bugfix/correccion-error
+  │   └── hotfix/parche-urgente
 ```
 
-Deberías ver algo como:
-```
-Test Run Successful.
-Total tests: 15
+### Pull Request Process
+
+1. Crea una branch desde `develop`
+2. Implementa cambios + tests
+3. Ejecuta `dotnet test` y `npm run lint`
+4. Abre PR con descripción detallada
+5. Espera aprobación (1+ reviewer)
+6. Squash merge a `develop`
+
+---
+
+## 📄 Licencia
+
+Este proyecto está licenciado bajo MIT License - ver [`LICENSE`](LICENSE)
+
+---
+
+## 📞 Soporte
+
+- 📧 Email: soporte@corlama.com
+- 📚 Docs: [`infra/README.md`](infra/README.md)
+- 🐛 Issues: [GitHub Issues](https://github.com/tu-usuario/COR-LAMA/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/tu-usuario/COR-LAMA/discussions)
+
+---
+
+**Hecho con ❤️ para la comunidad mototurística de L.A.M.A.** 🏍️
 Passed: 15
 Duration: ~500 ms
 ```

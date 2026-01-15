@@ -1,0 +1,279 @@
+name: Deploy Infrastructure (Bicep)
+
+# ============================================================================
+# Workflow para desplegar infraestructura Azure usando Bicep
+# Soporta despliegue a dev/test/prod con GitHub Environments
+# ============================================================================
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/bicep/**'
+      - '.github/workflows/deploy-infra.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
+      destroy:
+        description: 'Destroy infrastructure (use with caution!)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
+jobs:
+  # ==========================================================================
+  # JOB 1: Validate Bicep files
+  # ==========================================================================
+  validate:
+    name: Validate Bicep
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build Bicep files
+        run: |
+          az bicep build --file infra/bicep/main.bicep
+          az bicep build --file infra/bicep/modules/sql.bicep
+          az bicep build --file infra/bicep/modules/storage.bicep
+          az bicep build --file infra/bicep/modules/appservice.bicep
+          az bicep build --file infra/bicep/modules/redis.bicep
+          az bicep build --file infra/bicep/modules/keyvault.bicep
+          az bicep build --file infra/bicep/modules/monitoring.bicep
+          az bicep build --file infra/bicep/modules/staticwebapp.bicep
+
+      - name: Lint Bicep files
+        run: |
+          az bicep lint --file infra/bicep/main.bicep
+
+  # ==========================================================================
+  # JOB 2: Deploy to Development
+  # ==========================================================================
+  deploy-dev:
+    name: Deploy to Dev
+    needs: validate
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev' && github.event.inputs.destroy == 'false')
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+      url: ${{ steps.deploy.outputs.apiUrl }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: What-If Deployment
+        run: |
+          az deployment sub what-if \
+            --name lama-infra-dev-${{ github.run_number }} \
+            --location eastus \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters.dev.bicepparam \
+            --parameters sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+            --parameters azureAdAuthority='${{ secrets.AZURE_AD_AUTHORITY }}' \
+            --parameters azureAdClientId='${{ secrets.AZURE_AD_CLIENT_ID }}' \
+            --parameters azureAdAudience='${{ secrets.AZURE_AD_AUDIENCE }}'
+
+      - name: Deploy Infrastructure
+        id: deploy
+        run: |
+          az deployment sub create \
+            --name lama-infra-dev-${{ github.run_number }} \
+            --location eastus \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters.dev.bicepparam \
+            --parameters sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+            --parameters azureAdAuthority='${{ secrets.AZURE_AD_AUTHORITY }}' \
+            --parameters azureAdClientId='${{ secrets.AZURE_AD_CLIENT_ID }}' \
+            --parameters azureAdAudience='${{ secrets.AZURE_AD_AUDIENCE }}' \
+            --output json > deployment-output.json
+          
+          # Extract outputs
+          API_URL=$(jq -r '.properties.outputs.apiUrl.value' deployment-output.json)
+          FRONTEND_URL=$(jq -r '.properties.outputs.frontendUrl.value' deployment-output.json)
+          
+          echo "apiUrl=$API_URL" >> $GITHUB_OUTPUT
+          echo "frontendUrl=$FRONTEND_URL" >> $GITHUB_OUTPUT
+
+      - name: Summary
+        run: |
+          echo "## Deployment Successful ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **API URL:** ${{ steps.deploy.outputs.apiUrl }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend URL:** ${{ steps.deploy.outputs.frontendUrl }}" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # JOB 3: Deploy to Test
+  # ==========================================================================
+  deploy-test:
+    name: Deploy to Test
+    needs: validate
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'test' && github.event.inputs.destroy == 'false')
+    runs-on: ubuntu-latest
+    environment:
+      name: test
+      url: ${{ steps.deploy.outputs.apiUrl }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Infrastructure
+        id: deploy
+        run: |
+          az deployment sub create \
+            --name lama-infra-test-${{ github.run_number }} \
+            --location eastus \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters.test.bicepparam \
+            --parameters sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+            --parameters azureAdAuthority='${{ secrets.AZURE_AD_AUTHORITY }}' \
+            --parameters azureAdClientId='${{ secrets.AZURE_AD_CLIENT_ID }}' \
+            --parameters azureAdAudience='${{ secrets.AZURE_AD_AUDIENCE }}' \
+            --output json > deployment-output.json
+          
+          API_URL=$(jq -r '.properties.outputs.apiUrl.value' deployment-output.json)
+          FRONTEND_URL=$(jq -r '.properties.outputs.frontendUrl.value' deployment-output.json)
+          
+          echo "apiUrl=$API_URL" >> $GITHUB_OUTPUT
+          echo "frontendUrl=$FRONTEND_URL" >> $GITHUB_OUTPUT
+
+      - name: Summary
+        run: |
+          echo "## Test Deployment Successful ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **API URL:** ${{ steps.deploy.outputs.apiUrl }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend URL:** ${{ steps.deploy.outputs.frontendUrl }}" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # JOB 4: Deploy to Production (manual approval required)
+  # ==========================================================================
+  deploy-prod:
+    name: Deploy to Production
+    needs: validate
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod' && github.event.inputs.destroy == 'false')
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+      url: ${{ steps.deploy.outputs.apiUrl }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: What-If Deployment (Production)
+        run: |
+          az deployment sub what-if \
+            --name lama-infra-prod-${{ github.run_number }} \
+            --location eastus \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters.prod.bicepparam \
+            --parameters sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+            --parameters azureAdAuthority='${{ secrets.AZURE_AD_AUTHORITY }}' \
+            --parameters azureAdClientId='${{ secrets.AZURE_AD_CLIENT_ID }}' \
+            --parameters azureAdAudience='${{ secrets.AZURE_AD_AUDIENCE }}'
+
+      - name: Deploy Infrastructure
+        id: deploy
+        run: |
+          az deployment sub create \
+            --name lama-infra-prod-${{ github.run_number }} \
+            --location eastus \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters.prod.bicepparam \
+            --parameters sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+            --parameters azureAdAuthority='${{ secrets.AZURE_AD_AUTHORITY }}' \
+            --parameters azureAdClientId='${{ secrets.AZURE_AD_CLIENT_ID }}' \
+            --parameters azureAdAudience='${{ secrets.AZURE_AD_AUDIENCE }}' \
+            --output json > deployment-output.json
+          
+          API_URL=$(jq -r '.properties.outputs.apiUrl.value' deployment-output.json)
+          FRONTEND_URL=$(jq -r '.properties.outputs.frontendUrl.value' deployment-output.json)
+          
+          echo "apiUrl=$API_URL" >> $GITHUB_OUTPUT
+          echo "frontendUrl=$FRONTEND_URL" >> $GITHUB_OUTPUT
+
+      - name: Production Smoke Tests
+        run: |
+          sleep 30
+          curl -f ${{ steps.deploy.outputs.apiUrl }}/health || exit 1
+
+      - name: Summary
+        run: |
+          echo "## Production Deployment Successful ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **API URL:** ${{ steps.deploy.outputs.apiUrl }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend URL:** ${{ steps.deploy.outputs.frontendUrl }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment Time:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # JOB 5: Destroy Infrastructure (manual, with caution)
+  # ==========================================================================
+  destroy:
+    name: Destroy Infrastructure
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.destroy == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Destroy Resource Group
+        run: |
+          RG_NAME="rg-lama-${{ github.event.inputs.environment }}"
+          echo "⚠️ Destroying resource group: $RG_NAME"
+          az group delete --name $RG_NAME --yes --no-wait
+
+      - name: Summary
+        run: |
+          echo "## Infrastructure Destroy Initiated ⚠️" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Resource Group:** rg-lama-${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Deletion in progress (async)" >> $GITHUB_STEP_SUMMARY

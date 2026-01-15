@@ -1,0 +1,290 @@
+name: Deploy Application (API + Frontend)
+
+# ============================================================================
+# Workflow para desplegar la aplicación COR L.A.MA después de la infraestructura
+# 1. Ejecuta migraciones EF Core en SQL Database
+# 2. Despliega API .NET 8 al App Service
+# 3. Despliega Frontend Next.js a Static Web App
+# ============================================================================
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'frontend/**'
+      - '.github/workflows/deploy-app.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ==========================================================================
+  # JOB 1: Build & Test API (.NET 8)
+  # ==========================================================================
+  build-api:
+    name: Build API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore src/Lama.API/Lama.API.csproj
+
+      - name: Build API
+        run: dotnet build src/Lama.API/Lama.API.csproj --configuration Release --no-restore
+
+      - name: Run Tests
+        run: dotnet test src/Lama.API/Lama.API.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Publish API
+        run: dotnet publish src/Lama.API/Lama.API.csproj --configuration Release --output ./publish
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-build
+          path: ./publish
+
+  # ==========================================================================
+  # JOB 2: Build Frontend (Next.js)
+  # ==========================================================================
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build Next.js
+        working-directory: ./frontend
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://app-lama-dev.azurewebsites.net
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/.next
+
+  # ==========================================================================
+  # JOB 3: Deploy to Dev
+  # ==========================================================================
+  deploy-dev:
+    name: Deploy to Dev
+    needs: [build-api, build-frontend]
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download API artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-build
+          path: ./publish
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run EF Core Migrations
+        run: |
+          # Obtener connection string desde KeyVault
+          SQL_CONN=$(az keyvault secret show --vault-name kv-lama-dev-* --name SqlConnectionString --query value -o tsv)
+          
+          # Instalar EF Core tools
+          dotnet tool install --global dotnet-ef
+          
+          # Ejecutar migrations
+          cd src/Lama.Infrastructure
+          dotnet ef database update --startup-project ../Lama.API/Lama.API.csproj --connection "$SQL_CONN"
+
+      - name: Deploy API to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: app-lama-dev
+          package: ./publish
+
+      - name: Deploy Frontend to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: '/frontend'
+          output_location: '.next'
+          skip_app_build: true
+
+      - name: Health Check
+        run: |
+          sleep 30
+          curl -f https://app-lama-dev.azurewebsites.net/health || exit 1
+
+  # ==========================================================================
+  # JOB 4: Deploy to Test
+  # ==========================================================================
+  deploy-test:
+    name: Deploy to Test
+    needs: [build-api, build-frontend]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'test'
+    runs-on: ubuntu-latest
+    environment:
+      name: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download API artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-build
+          path: ./publish
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run EF Core Migrations
+        run: |
+          SQL_CONN=$(az keyvault secret show --vault-name kv-lama-test-* --name SqlConnectionString --query value -o tsv)
+          dotnet tool install --global dotnet-ef
+          cd src/Lama.Infrastructure
+          dotnet ef database update --startup-project ../Lama.API/Lama.API.csproj --connection "$SQL_CONN"
+
+      - name: Deploy API to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: app-lama-test
+          package: ./publish
+
+      - name: Deploy Frontend to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_TEST }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: '/frontend'
+          output_location: '.next'
+
+      - name: Health Check
+        run: |
+          sleep 30
+          curl -f https://app-lama-test.azurewebsites.net/health || exit 1
+
+  # ==========================================================================
+  # JOB 5: Deploy to Production (manual approval)
+  # ==========================================================================
+  deploy-prod:
+    name: Deploy to Production
+    needs: [build-api, build-frontend]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download API artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-build
+          path: ./publish
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run EF Core Migrations (Production)
+        run: |
+          SQL_CONN=$(az keyvault secret show --vault-name kv-lama-prod-* --name SqlConnectionString --query value -o tsv)
+          dotnet tool install --global dotnet-ef
+          cd src/Lama.Infrastructure
+          dotnet ef database update --startup-project ../Lama.API/Lama.API.csproj --connection "$SQL_CONN"
+
+      - name: Deploy API to App Service (Staging Slot first)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: app-lama-prod
+          slot-name: staging
+          package: ./publish
+
+      - name: Smoke Test (Staging Slot)
+        run: |
+          sleep 30
+          curl -f https://app-lama-prod-staging.azurewebsites.net/health || exit 1
+
+      - name: Swap Staging to Production
+        run: |
+          az webapp deployment slot swap \
+            --name app-lama-prod \
+            --resource-group rg-lama-prod \
+            --slot staging \
+            --target-slot production
+
+      - name: Deploy Frontend to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PROD }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: '/frontend'
+          output_location: '.next'
+
+      - name: Production Health Check
+        run: |
+          sleep 30
+          curl -f https://app-lama-prod.azurewebsites.net/health || exit 1
+
+      - name: Summary
+        run: |
+          echo "## Production Deployment Successful ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **API:** https://app-lama-prod.azurewebsites.net" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend:** https://lama-prod.azurestaticapps.net" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY

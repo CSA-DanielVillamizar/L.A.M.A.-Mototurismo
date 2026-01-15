@@ -1,0 +1,56 @@
+# ============================================
+# .gitignore para carpeta /infra
+# Previene que secretos y archivos sensibles
+# sean subidos accidentalmente a Git
+# ============================================
+
+# Archivos de secretos
+.azure-secrets.txt
+.swa-tokens.txt
+*.secrets.txt
+
+# Archivos de entorno
+.env
+.env.*
+!.env.example
+
+# Configuración local
+appsettings.*.json
+!appsettings.json
+
+# Bicep generados
+*.json
+!parameters.*.bicepparam
+!*.schema.json
+
+# Logs
+*.log
+
+# Backups
+*.bak
+*.backup
+
+# Azure CLI output
+azure-cli-output.json
+
+# Terraform state (si se migra en el futuro)
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+
+# IDEs
+.vs/
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+tmp/
+temp/
+*.tmp
