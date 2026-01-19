@@ -100,3 +100,41 @@ export interface ApiError {
   error: string;
   details?: string;
 }
+
+/**
+ * Resultado paginado genérico
+ */
+export interface PagedResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+/**
+ * Item de la cola admin (asistencia pendiente de validación)
+ */
+export interface QueueItem {
+  attendanceId: number;
+  tenantId: string;
+  eventId: number;
+  eventName: string;
+  eventDate: string; // DateOnly YYYY-MM-DD
+  memberId: number;
+  memberName: string;
+  memberEmail: string;
+  chapterId: number;
+  vehicleId: number;
+  vehicleLicPlate: string;
+  vehicleMotorcycleData: string;
+  status: 'PENDING' | 'CONFIRMED' | 'REJECTED';
+  pointsPerEvent?: number;
+  pointsPerDistance?: number;
+  pointsAwardedPerMember?: number;
+  visitorClass?: string;
+  confirmedAt?: string;
+  confirmedBy?: number;
+  createdAt: string;
+  updatedAt: string;
+}

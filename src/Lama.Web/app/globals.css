@@ -1,29 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    /* Colores neutros premium (Stripe-like) */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
+    
+    /* Grises profesionales */
+    --gray-50: 250 10% 97%;
+    --gray-100: 240 10% 95%;
+    --gray-200: 240 6% 90%;
+    --gray-300: 240 5% 85%;
+    --gray-400: 240 4% 75%;
+    --gray-500: 240 3% 60%;
+    --gray-600: 240 4% 46%;
+    --gray-700: 240 6% 25%;
+    --gray-800: 240 10% 15%;
+    --gray-900: 220 13% 9%;
+    
+    /* Componentes */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    
+    /* Acento: Indigo profesional (no saturado) */
+    --primary: 226 84% 60%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    
+    /* Secundarios */
+    --secondary: 240 5% 95%;
+    --secondary-foreground: 240 6% 25%;
+    --muted: 240 5% 95%;
+    --muted-foreground: 240 3% 60%;
+    
+    /* Estados */
+    --accent: 226 84% 60%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    
+    /* Bordes y inputs */
+    --border: 240 5% 90%;
+    --input: 240 5% 95%;
+    --ring: 226 84% 60%;
+    
+    /* Espaciado y forma */
     --radius: 0.5rem;
+    
+    /* Sombras Stripe-like (sutiles) */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
   }
 
   .dark {
@@ -53,7 +85,45 @@
   * {
     @apply border-border;
   }
+  
+  /* Tipografía base profesional */
+  html {
+    font-family: var(--font-inter, ui-sans-serif, system-ui, sans-serif);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white text-gray-900;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+  }
+  
+  /* Headings profesionales */
+  h1 {
+    @apply text-3xl font-bold tracking-tight text-gray-900;
+  }
+  
+  h2 {
+    @apply text-2xl font-semibold tracking-tight text-gray-900;
+  }
+  
+  h3 {
+    @apply text-xl font-semibold text-gray-900;
+  }
+  
+  h4 {
+    @apply text-lg font-semibold text-gray-900;
+  }
+  
+  /* Selección de texto profesional */
+  ::selection {
+    @apply bg-indigo-100 text-gray-900;
+  }
+  
+  /* Focus rings sutiles pero visibles */
+  :focus-visible {
+    @apply outline-none ring-2 ring-indigo-500 ring-offset-2;
   }
 }

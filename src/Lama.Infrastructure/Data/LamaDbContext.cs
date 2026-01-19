@@ -68,6 +68,9 @@ public class LamaDbContext : DbContext, ILamaDbContext
     /// <summary>Tabla de Logs de Auditoría (trazabilidad de acciones auditables)</summary>
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
 
+    /// <summary>Tabla de Refresh Tokens (sesiones web con rotación)</summary>
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -86,6 +89,7 @@ public class LamaDbContext : DbContext, ILamaDbContext
         modelBuilder.ApplyConfiguration(new EvidenceConfiguration());
         modelBuilder.ApplyConfiguration(new RankingSnapshotConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogConfiguration());
+        modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
 
         // Query Filters para Multi-Tenancy
         // Estas se aplican automáticamente a todas las queries, sin necesidad de modificar los repositorios
@@ -121,6 +125,9 @@ public class LamaDbContext : DbContext, ILamaDbContext
 
             // AuditLogs: filtrar por TenantId actual
             modelBuilder.Entity<AuditLog>().HasQueryFilter(al => al.TenantId == _tenantProvider.CurrentTenantId);
+
+            // RefreshTokens: filtrar por TenantId actual
+            modelBuilder.Entity<RefreshToken>().HasQueryFilter(rt => rt.TenantId == _tenantProvider.CurrentTenantId);
         }
     }
 }

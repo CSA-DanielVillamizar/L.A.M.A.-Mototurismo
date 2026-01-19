@@ -7,13 +7,11 @@ namespace Lama.API.Controllers;
 
 /// <summary>
 /// Controlador para operaciones administrativas de eventos
-/// Endpoints exclusivos para MTO (Management Team Officers)
+/// Endpoints exclusivos para usuarios con rol ADMIN o superior
 /// </summary>
 [ApiController]
 [Route("api/v1/admin/events")]
-#if !DEBUG
-[Authorize(Roles = "MTO,Admin")]
-#endif
+[Authorize(Policy = "AdminOnly")]
 public class AdminEventsController : ControllerBase
 {
     private readonly IEventRepository _eventRepository;

@@ -3,14 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { IconMenu, IconClose, IconChevronDown, IconLogOut, IconSettings, IconUser } from '@/components/icons';
+import { BarChart3, Trophy, Calendar, Users, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigationItems = [
-  { label: 'Dashboard', href: '/admin', icon: '📊' },
-  { label: 'COR Admin', href: '/admin/cor', icon: '🏆' },
-  { label: 'Eventos', href: '/admin/events', icon: '📅' },
-  { label: 'Miembros', href: '/admin/members', icon: '👥' },
-  { label: 'Reportes', href: '/admin/reports', icon: '📈' },
+  { label: 'Dashboard', href: '/admin', icon: BarChart3 },
+  { label: 'COR Admin', href: '/admin/cor', icon: Trophy },
+  { label: 'Eventos', href: '/admin/events', icon: Calendar },
+  { label: 'Miembros', href: '/admin/members', icon: Users },
+  { label: 'Reportes', href: '/admin/reports', icon: TrendingUp },
 ];
 
 /**
@@ -49,24 +50,27 @@ export function Sidebar() {
         {/* Logo / Branding */}
         <div className="border-b border-primary-800 px-6 py-8">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-            <span className="text-2xl">🏍️</span>
+            <Trophy size={24} className="text-accent-500" />
             <span>LAMA COR</span>
           </Link>
         </div>
 
         {/* Navigation */}
         <nav className="space-y-1 px-3 py-6">
-          {navigationItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="group relative flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors hover:bg-primary-800 active:bg-primary-700"
-              onClick={() => setIsOpen(false)}
-            >
-              <span className="text-lg">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
+          {navigationItems.map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="group relative flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors hover:bg-primary-800 active:bg-primary-700"
+                onClick={() => setIsOpen(false)}
+              >
+                <IconComponent size={20} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         {/* User Menu at Bottom */}

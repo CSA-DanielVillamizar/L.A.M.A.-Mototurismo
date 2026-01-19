@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Lama.Application.Services;
+using Lama.API.Models;
 
 namespace Lama.API.Controllers;
 
@@ -57,22 +58,16 @@ public class AdminController(IAttendanceConfirmationService attendanceConfirmati
     [Authorize(Roles = "Admin")] // En RELEASE: requiere JWT + rol Admin
 #endif
     [HttpPost("evidence/upload")]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(EvidenceUploadResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [DisableRequestSizeLimit]
     public async Task<IActionResult> UploadEvidenceAsync(
         [FromQuery] int eventId,
-        [FromForm] int memberId,
-        [FromForm] int vehicleId,
-        [FromForm] string evidenceType,
-        [FromForm] IFormFile pilotWithBikePhoto,
-        [FromForm] IFormFile odometerCloseupPhoto,
-        [FromForm] double odometerReading,
-        [FromForm] string unit,
-        [FromForm] DateOnly? readingDate = null,
-        [FromForm] string? notes = null,
+          [FromForm] UploadEvidenceFormDto formData,
         CancellationToken cancellationToken = default)
     {
 #if DEBUG
@@ -81,22 +76,22 @@ public class AdminController(IAttendanceConfirmationService attendanceConfirmati
             return Unauthorized(new { error = "Requiere autenticación JWT o header X-Dev-Bypass: true en DEBUG" });
 #endif
         // Validación básica
-        if (eventId <= 0 || memberId <= 0 || vehicleId <= 0)
+          if (eventId <= 0 || formData.MemberId <= 0 || formData.VehicleId <= 0)
             return BadRequest("eventId, memberId y vehicleId son requeridos y deben ser > 0");
 
-        if (pilotWithBikePhoto == null || pilotWithBikePhoto.Length == 0)
+          if (formData.PilotWithBikePhoto == null || formData.PilotWithBikePhoto.Length == 0)
             return BadRequest("Foto del piloto con moto es requerida");
 
-        if (odometerCloseupPhoto == null || odometerCloseupPhoto.Length == 0)
+          if (formData.OdometerCloseupPhoto == null || formData.OdometerCloseupPhoto.Length == 0)
             return BadRequest("Foto del odómetro es requerida");
 
-        if (string.IsNullOrEmpty(evidenceType) || (evidenceType != "START_YEAR" && evidenceType != "CUTOFF"))
+          if (string.IsNullOrEmpty(formData.EvidenceType) || (formData.EvidenceType != "START_YEAR" && formData.EvidenceType != "CUTOFF"))
             return BadRequest("evidenceType debe ser START_YEAR o CUTOFF");
 
-        if (string.IsNullOrEmpty(unit) || (unit != "Miles" && unit != "Kilometers"))
+          if (string.IsNullOrEmpty(formData.Unit) || (formData.Unit != "Miles" && formData.Unit != "Kilometers"))
             return BadRequest("unit debe ser Miles o Kilometers");
 
-        if (odometerReading <= 0)
+          if (formData.OdometerReading <= 0)
             return BadRequest("odometerReading debe ser mayor a 0");
 
         try
@@ -106,22 +101,22 @@ public class AdminController(IAttendanceConfirmationService attendanceConfirmati
             int validatedByMemberId = 1; // Placeholder
 
             // Crear solicitud
-            using var pilotStream = pilotWithBikePhoto.OpenReadStream();
-            using var odometerStream = odometerCloseupPhoto.OpenReadStream();
+                using var pilotStream = formData.PilotWithBikePhoto.OpenReadStream();
+                using var odometerStream = formData.OdometerCloseupPhoto.OpenReadStream();
 
             var request = new UploadEvidenceRequest
             {
-                MemberId = memberId,
-                VehicleId = vehicleId,
-                EvidenceType = evidenceType,
+                     MemberId = formData.MemberId,
+                     VehicleId = formData.VehicleId,
+                     EvidenceType = formData.EvidenceType,
                 PilotWithBikePhotoStream = pilotStream,
-                PilotWithBikePhotoFileName = pilotWithBikePhoto.FileName,
+                     PilotWithBikePhotoFileName = formData.PilotWithBikePhoto.FileName,
                 OdometerCloseupPhotoStream = odometerStream,
-                OdometerCloseupPhotoFileName = odometerCloseupPhoto.FileName,
-                OdometerReading = odometerReading,
-                Unit = unit,
-                ReadingDate = readingDate,
-                Notes = notes
+                     OdometerCloseupPhotoFileName = formData.OdometerCloseupPhoto.FileName,
+                     OdometerReading = formData.OdometerReading,
+                     Unit = formData.Unit,
+                     ReadingDate = formData.ReadingDate,
+                     Notes = formData.Notes
             };
 
             // Procesar confirmación
@@ -145,7 +140,7 @@ public class AdminController(IAttendanceConfirmationService attendanceConfirmati
                 MemberId = result.MemberId ?? 0,
                 VehicleId = result.VehicleId ?? 0,
                 AttendanceId = result.AttendanceId ?? 0,
-                EvidenceType = evidenceType
+                 EvidenceType = formData.EvidenceType
             };
 
             return Ok(response);

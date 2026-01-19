@@ -51,6 +51,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IVehicleRepository, VehicleRepository>();
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IAttendanceRepository, AttendanceRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         // Services
         services.AddScoped<IMemberStatusService, MemberStatusService>();
@@ -59,6 +60,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBlobStorageService, FakeBlobStorageService>();
         services.AddScoped<IAttendanceConfirmationService, AttendanceConfirmationService>();
         
+        // Authentication Service: Genera JWT tokens y gestiona refresh tokens con Redis
+        services.AddScoped<IAuthenticationService, AuthenticationService>();
+        
+        // Auth Session Service: Gestiona sesiones de aplicación con refresh tokens rotativos
+        services.AddScoped<IAuthSessionService, AuthSessionService>();
+        
         // Identity User Service: Sincroniza usuarios de Entra ID con base de datos local
         services.AddScoped<IIdentityUserService, IdentityUserService>();
 
@@ -66,7 +73,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserAuthorizationService, UserAuthorizationService>();
 
         // Blob SAS Service: Genera SAS URLs para upload directo a Azure Blob
-        services.AddScoped<IBlobSasService, BlobSasService>();
+        // Comentado temporalmente para desarrollo sin Azure
+        // services.AddScoped<IBlobSasService, BlobSasService>();
 
         // Ranking Service: Gestiona snapshots de ranking con actualizaciones incrementales y rebuilds
         services.AddScoped<IRankingService, RankingService>();
@@ -78,15 +86,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICacheService, CacheService>();
 
         // Azure Blob Service Client: Cliente para Azure Blob Storage
-        services.AddSingleton(sp =>
-        {
-            var connectionString = configuration.GetConnectionString("AzureStorage");
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                throw new InvalidOperationException("AzureStorage connection string no configurada");
-            }
-            return new Azure.Storage.Blobs.BlobServiceClient(connectionString);
-        });
+        // Comentado temporalmente para desarrollo sin Azure
+        // services.AddSingleton(sp =>
+        // {
+        //     var connectionString = configuration.GetConnectionString("AzureStorage");
+        //     if (string.IsNullOrEmpty(connectionString))
+        //     {
+        //         throw new InvalidOperationException("AzureStorage connection string no configurada");
+        //     }
+        //     return new Azure.Storage.Blobs.BlobServiceClient(connectionString);
+        // });
 
         return services;
     }

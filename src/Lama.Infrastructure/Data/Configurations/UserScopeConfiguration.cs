@@ -51,19 +51,19 @@ public class UserScopeConfiguration : IEntityTypeConfiguration<UserScope>
 
         // Índices para optimizar búsquedas frecuentes en autorización
         builder.HasIndex(us => new { us.TenantId, us.ExternalSubjectId })
-            .HasName("IX_UserScopes_TenantId_ExternalSubjectId");
+            .HasDatabaseName("IX_UserScopes_TenantId_ExternalSubjectId");
 
         builder.HasIndex(us => new { us.TenantId, us.ExternalSubjectId, us.ScopeType })
-            .HasName("IX_UserScopes_TenantId_ExternalSubjectId_ScopeType");
+            .HasDatabaseName("IX_UserScopes_TenantId_ExternalSubjectId_ScopeType");
 
         builder.HasIndex(us => new { us.TenantId, us.ExternalSubjectId, us.IsActive })
-            .HasName("IX_UserScopes_TenantId_ExternalSubjectId_IsActive");
+            .HasDatabaseName("IX_UserScopes_TenantId_ExternalSubjectId_IsActive");
 
         builder.HasIndex(us => new { us.TenantId, us.ScopeType, us.ScopeId })
-            .HasName("IX_UserScopes_TenantId_ScopeType_ScopeId");
+            .HasDatabaseName("IX_UserScopes_TenantId_ScopeType_ScopeId");
 
         builder.HasIndex(us => us.AssignedAt)
-            .HasName("IX_UserScopes_AssignedAt");
+            .HasDatabaseName("IX_UserScopes_AssignedAt");
 
         // Conversión de enum a string
         builder.Property(us => us.ScopeType)

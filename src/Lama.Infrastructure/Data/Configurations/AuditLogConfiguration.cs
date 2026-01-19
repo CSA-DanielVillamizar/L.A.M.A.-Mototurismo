@@ -38,26 +38,26 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         // Índices para búsquedas eficientes
         // Índice compuesto: buscar auditorías por miembro dentro de un tenant
         builder.HasIndex(a => new { a.TenantId, a.ActorMemberId, a.CreatedAt })
-            .HasName("IX_AuditLogs_TenantMemberDate");
+            .HasDatabaseName("IX_AuditLogs_TenantMemberDate");
 
         // Índice compuesto: buscar auditorías de una entidad específica
         builder.HasIndex(a => new { a.TenantId, a.EntityType, a.EntityId, a.CreatedAt })
-            .HasName("IX_AuditLogs_TenantEntityDate");
+            .HasDatabaseName("IX_AuditLogs_TenantEntityDate");
 
         // Índice para búsquedas por CorrelationId (rastreo distribuido)
         builder.HasIndex(a => a.CorrelationId)
-            .HasName("IX_AuditLogs_CorrelationId");
+            .HasDatabaseName("IX_AuditLogs_CorrelationId");
 
         // Índice para búsquedas por tipo de acción (análisis agregado)
         builder.HasIndex(a => new { a.TenantId, a.Action, a.CreatedAt })
-            .HasName("IX_AuditLogs_TenantActionDate");
+            .HasDatabaseName("IX_AuditLogs_TenantActionDate");
 
         // Índice para búsquedas por fecha (limpieza de datos antiguos, resúmenes)
         builder.HasIndex(a => new { a.TenantId, a.CreatedAt })
-            .HasName("IX_AuditLogs_TenantDate");
+            .HasDatabaseName("IX_AuditLogs_TenantDate");
 
         // Índice para detectar intentos de acceso no autorizado
         builder.HasIndex(a => new { a.TenantId, a.IpAddress, a.CreatedAt })
-            .HasName("IX_AuditLogs_TenantIpDate");
+            .HasDatabaseName("IX_AuditLogs_TenantIpDate");
     }
 }

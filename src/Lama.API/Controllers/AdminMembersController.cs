@@ -7,13 +7,11 @@ namespace Lama.API.Controllers;
 
 /// <summary>
 /// Controlador para operaciones administrativas de miembros
-/// Endpoints exclusivos para MTO (Management Team Officers)
+/// Endpoints exclusivos para usuarios con rol ADMIN o superior
 /// </summary>
 [ApiController]
 [Route("api/v1/admin/members")]
-#if !DEBUG
-[Authorize(Roles = "MTO,Admin")]
-#endif
+[Authorize(Policy = "AdminOnly")]
 public class AdminMembersController : ControllerBase
 {
     private readonly IMemberRepository _memberRepository;

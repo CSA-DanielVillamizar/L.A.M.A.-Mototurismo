@@ -104,6 +104,33 @@ public class Program
         // Configurar Rate Limiting (ASP.NET Core 7+)
         builder.Services.AddRateLimiter(options =>
         {
+            // Política para login: 10 req/min por IP
+            options.AddFixedWindowLimiter("login", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 10;
+                limiterOptions.Window = TimeSpan.FromMinutes(1);
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = 3;
+            });
+
+            // Política para signup: 5 req/min por IP
+            options.AddFixedWindowLimiter("signup", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 5;
+                limiterOptions.Window = TimeSpan.FromMinutes(1);
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = 1;
+            });
+
+            // Política para forgot password: 3 req/min por IP
+            options.AddFixedWindowLimiter("forgotPassword", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 3;
+                limiterOptions.Window = TimeSpan.FromMinutes(1);
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = 1;
+            });
+
             // Política para endpoints de búsqueda: 30 req/min por IP
             options.AddFixedWindowLimiter("search", limiterOptions =>
             {
@@ -172,11 +199,33 @@ public class Program
                 policy.Requirements.Add(new ResourceAuthorizationRequirement(
                     RoleType.SUPER_ADMIN,
                     ScopeType.GLOBAL)));
+
+            // Política: Admin general - para cualquier rol de admin (ADMIN_CHAPTER o superior)
+            // Usado para endpoints /admin/* que requieren permisos administrativos
+            options.AddPolicy("AdminOnly", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                {
+                    var userRoles = context.User.FindAll("role").Select(c => c.Value).ToList();
+                    return userRoles.Any(role => role.StartsWith("ADMIN_") || role == "SUPER_ADMIN");
+                });
+            });
         });
 
-        // Configurar CORS (opcional)
+        // Configurar CORS para soporte de credentials (cookies httpOnly)
         builder.Services.AddCors(options =>
         {
+            options.AddPolicy("AllowFrontend", policy =>
+            {
+                var frontendUrl = builder.Configuration["Frontend:Url"] ?? "http://localhost:3002";
+                policy.WithOrigins(frontendUrl)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials(); // Permitir envío de cookies
+            });
+
+            // Política permisiva para DEV (usar solo en desarrollo)
             options.AddPolicy("AllowAll", policy =>
             {
                 policy.AllowAnyOrigin()
@@ -188,16 +237,30 @@ public class Program
         var app = builder.Build();
 
         // Configure the HTTP request pipeline
-        app.UseExceptionHandler("/error");
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseDeveloperExceptionPage();
+        }
+        else
+        {
+            app.UseExceptionHandler("/error");
+        }
 
         app.UseSwagger();
         app.UseSwaggerUI();
 
-        app.UseHttpsRedirection();
+        // HTTPS Redirection: Solo en producción
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseHttpsRedirection();
+        }
 
         // Middleware de CorrelationId: DEBE estar al principio para capturar todas las solicitudes
         // Asigna ID único a cada solicitud para rastreo distribuido
         app.UseCorrelationIdMiddleware();
+
+            // CORS: DEBE estar ANTES de autenticación para que preflight OPTIONS funcione
+            app.UseCors("AllowFrontend");
 
         // Rate Limiting: aplicar ANTES de autenticación
         app.UseRateLimiter();
@@ -212,8 +275,10 @@ public class Program
         // Middleware para sincronizar IdentityUser después de autenticación exitosa
         app.UseMiddleware<IdentityUserSyncMiddleware>();
 
-        app.UseCors("AllowAll");
         app.MapControllers();
+
+        // Endpoint de health check para testing
+        app.MapGet("/health", () => "OK");
 
         app.Run();
     }

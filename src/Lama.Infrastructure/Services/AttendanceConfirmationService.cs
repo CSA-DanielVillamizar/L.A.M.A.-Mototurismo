@@ -139,16 +139,16 @@ public class AttendanceConfirmationService(
 
                 return result;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             result.Success = false;
-            result.Message = $"Error confirmando asistencia: {ex.Message}";
+            result.Message = "Error confirmando asistencia: Ocurrió un error inesperado";
             return result;
         }
     }

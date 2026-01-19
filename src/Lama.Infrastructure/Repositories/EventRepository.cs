@@ -15,6 +15,7 @@ public class EventRepository(LamaDbContext context) : IEventRepository
     public async Task<Event?> GetByIdAsync(int eventId, CancellationToken cancellationToken = default)
     {
         return await _context.Events
+            .AsNoTracking()
             .Include(e => e.Attendances)
             .FirstOrDefaultAsync(e => e.Id == eventId, cancellationToken);
     }
@@ -22,6 +23,7 @@ public class EventRepository(LamaDbContext context) : IEventRepository
     public async Task<IEnumerable<Event>> GetByChapterAsync(int chapterId, CancellationToken cancellationToken = default)
     {
         return await _context.Events
+            .AsNoTracking()
             .Where(e => e.ChapterId == chapterId)
             .OrderBy(e => e.EventStartDate)
             .ToListAsync(cancellationToken);
@@ -30,6 +32,7 @@ public class EventRepository(LamaDbContext context) : IEventRepository
     public async Task<IEnumerable<Event>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Events
+            .AsNoTracking()
             .OrderBy(e => e.EventStartDate)
             .ToListAsync(cancellationToken);
     }

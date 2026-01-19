@@ -48,16 +48,16 @@ public class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
 
         // Índices para optimizar búsquedas
         builder.HasIndex(ur => new { ur.TenantId, ur.ExternalSubjectId })
-            .HasName("IX_UserRoles_TenantId_ExternalSubjectId");
+            .HasDatabaseName("IX_UserRoles_TenantId_ExternalSubjectId");
 
         builder.HasIndex(ur => new { ur.TenantId, ur.Role })
-            .HasName("IX_UserRoles_TenantId_Role");
+            .HasDatabaseName("IX_UserRoles_TenantId_Role");
 
         builder.HasIndex(ur => new { ur.TenantId, ur.ExternalSubjectId, ur.IsActive })
-            .HasName("IX_UserRoles_TenantId_ExternalSubjectId_IsActive");
+            .HasDatabaseName("IX_UserRoles_TenantId_ExternalSubjectId_IsActive");
 
         builder.HasIndex(ur => ur.AssignedAt)
-            .HasName("IX_UserRoles_AssignedAt");
+            .HasDatabaseName("IX_UserRoles_AssignedAt");
 
         // Conversión de enum a string para mejor legibilidad en BD
         builder.Property(ur => ur.Role)

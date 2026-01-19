@@ -15,6 +15,7 @@ public class MemberRepository(LamaDbContext context) : IMemberRepository
     public async Task<Member?> GetByIdAsync(int memberId, CancellationToken cancellationToken = default)
     {
         return await _context.Members
+            .AsNoTracking()
             .Include(m => m.Vehicles)
             .Include(m => m.Attendances)
             .FirstOrDefaultAsync(m => m.Id == memberId, cancellationToken);
@@ -23,12 +24,14 @@ public class MemberRepository(LamaDbContext context) : IMemberRepository
     public async Task<Member?> GetByOrderAsync(int order, CancellationToken cancellationToken = default)
     {
         return await _context.Members
+            .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Order == order, cancellationToken);
     }
 
     public async Task<IEnumerable<Member>> GetByChapterAsync(int chapterId, CancellationToken cancellationToken = default)
     {
         return await _context.Members
+            .AsNoTracking()
             .Where(m => m.ChapterId == chapterId && m.Status == "ACTIVE")
             .ToListAsync(cancellationToken);
     }
@@ -36,6 +39,7 @@ public class MemberRepository(LamaDbContext context) : IMemberRepository
     public async Task<IEnumerable<Member>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Members
+            .AsNoTracking()
             .Include(m => m.Vehicles)
             .ToListAsync(cancellationToken);
     }

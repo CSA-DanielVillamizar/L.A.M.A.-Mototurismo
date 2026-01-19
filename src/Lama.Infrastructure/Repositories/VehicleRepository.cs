@@ -15,6 +15,7 @@ public class VehicleRepository(LamaDbContext context) : IVehicleRepository
     public async Task<Vehicle?> GetByIdAsync(int vehicleId, CancellationToken cancellationToken = default)
     {
         return await _context.Vehicles
+            .AsNoTracking()
             .Include(v => v.Member)
             .Include(v => v.Attendances)
             .FirstOrDefaultAsync(v => v.Id == vehicleId, cancellationToken);
@@ -23,12 +24,14 @@ public class VehicleRepository(LamaDbContext context) : IVehicleRepository
     public async Task<Vehicle?> GetByLicPlateAsync(string licPlate, CancellationToken cancellationToken = default)
     {
         return await _context.Vehicles
+            .AsNoTracking()
             .FirstOrDefaultAsync(v => v.LicPlate == licPlate, cancellationToken);
     }
 
     public async Task<IEnumerable<Vehicle>> GetActiveByMemberAsync(int memberId, CancellationToken cancellationToken = default)
     {
         return await _context.Vehicles
+            .AsNoTracking()
             .Where(v => v.MemberId == memberId && v.IsActiveForChampionship)
             .ToListAsync(cancellationToken);
     }
@@ -36,6 +39,7 @@ public class VehicleRepository(LamaDbContext context) : IVehicleRepository
     public async Task<IEnumerable<Vehicle>> GetByMemberAsync(int memberId, CancellationToken cancellationToken = default)
     {
         return await _context.Vehicles
+            .AsNoTracking()
             .Where(v => v.MemberId == memberId)
             .ToListAsync(cancellationToken);
     }
