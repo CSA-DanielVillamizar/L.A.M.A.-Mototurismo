@@ -48,7 +48,7 @@ public class CacheService : ICacheService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al leer del caché, clave: {Key}", key);
+            _logger.LogDebug(ex, "Cache unavailable, usando fallback para clave: {Key}", key);
             return default;
         }
     }
@@ -69,7 +69,7 @@ public class CacheService : ICacheService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al escribir en caché, clave: {Key}", key);
+            _logger.LogDebug(ex, "Cache write failed (optional), continuando sin caché para clave: {Key}", key);
             // No lanzar excepción - el caché es opcional
         }
     }
