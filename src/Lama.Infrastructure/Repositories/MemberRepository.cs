@@ -56,7 +56,7 @@ public class MemberRepository(LamaDbContext context) : IMemberRepository
 
         // Query ejecutada en SQL Server con índice en CompleteNamesNormalized
         return await _context.Members
-            .Where(m => m.CompleteNamesNormalized != null && 
+            .Where(m => m.CompleteNamesNormalized != null &&
                         m.CompleteNamesNormalized.Contains(normalizedTerm))
             .OrderBy(m => m.CompleteNames)
             .Take(take)
@@ -74,9 +74,9 @@ public class MemberRepository(LamaDbContext context) : IMemberRepository
 
         // Remover tildes
         var normalized = text.Normalize(System.Text.NormalizationForm.FormD);
-        var chars = normalized.Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) 
+        var chars = normalized.Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c)
             != System.Globalization.UnicodeCategory.NonSpacingMark).ToArray();
-        
+
         return new string(chars)
             .ToUpperInvariant()
             .Trim();
